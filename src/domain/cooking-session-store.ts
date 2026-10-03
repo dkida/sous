@@ -1,4 +1,5 @@
 import type { CookingSession, Recipe } from "./types";
+import { validateRecipe } from "./recipe-validation";
 
 /** Process-local storage. All public results are detached snapshots. */
 export class CookingSessionStore {
@@ -11,20 +12,11 @@ export class CookingSessionStore {
     if (this.sessions.has(id)) {
       throw new Error(`Session ${id} already exists.`);
     }
-    if (!Number.isInteger(recipe.servings) || recipe.servings <= 0) {
-      throw new Error("Recipe servings must be a positive integer.");
-    }
-    if (recipe.steps.length === 0) {
-      throw new Error("A recipe must contain at least one step.");
-    }
-    const stepIds = recipe.steps.map((step) => step.id);
-    if (stepIds.some((stepId) => !stepId.trim()) || new Set(stepIds).size !== stepIds.length) {
-      throw new Error("Recipe step IDs must be non-empty and unique.");
-    }
+    const validatedRecipe = validateRecipe(recipe);
 
     const session: CookingSession = {
       id,
-      recipe: structuredClone(recipe),
+      recipe: validatedRecipe,
       status: "ready",
       currentStepId: null,
       completedStepIds: [],

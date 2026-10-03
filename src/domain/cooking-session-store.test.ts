@@ -177,6 +177,21 @@ describe("CookingSessionStore", () => {
     }
   });
 
+  it("rejects invalid quantities and references before reserving a session ID", () => {
+    const store = new CookingSessionStore();
+    for (const quantity of [-1, 0, NaN, Infinity]) {
+      const recipe = makeRecipe();
+      recipe.ingredients[0]!.quantity = quantity;
+      assert.throws(() => store.createSession("dinner", recipe), /positive finite numbers/);
+      assert.equal(store.getSession("dinner"), undefined);
+    }
+    const recipe = makeRecipe();
+    recipe.steps[0]!.ingredientIds.push("missing");
+    assert.throws(() => store.createSession("dinner", recipe), /known and unique/);
+    assert.equal(store.getSession("dinner"), undefined);
+    assert.equal(store.createSession("dinner", makeRecipe()).status, "ready");
+  });
+
   it("protects stored state from input and returned snapshot mutations", () => {
     const store = new CookingSessionStore();
     const recipe = makeRecipe();
