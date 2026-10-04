@@ -1,0 +1,27 @@
+{
+  "provider": "gemini-flash-lite",
+  "model": "gemini-3.5-flash-lite",
+  "mode": "native JSON Schema; separate from baseline benchmark",
+  "configuration": "generationConfig.responseFormat.text: mimeType APPLICATION_JSON and schema",
+  "timing": {
+    "interaction": "proposal",
+    "outcome": "ok",
+    "totalMs": 994.730769,
+    "llmMs": 994.298842,
+    "validationMs": 0.311478999999963,
+    "operationMs": 0.04222999999979038
+  },
+  "promptHash": "aebb5ba13995d8acd1df0d29c33d22fba2a893c40fb21630946550029f20ae42",
+  "success": true,
+  "failureKind": null,
+  "validStructuredOutput": true,
+  "correctStateTransition": true,
+  "completedHistoryPreserved": true,
+  "culinaryAssessment": "requires manual review",
+  "output": {
+    "dishName": "Tomato Parmesan Pasta",
+    "description": "A quick and comforting pasta tossed in a rich garlic and onion tomato sauce, finished with grated parmesan cheese.",
+    "estimatedCookingMinutes": 25,
+    "servings": 2
+  }
+}

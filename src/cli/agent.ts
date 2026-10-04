@@ -2,7 +2,11 @@ import { createInterface } from "node:readline";
 import { stdin, stdout } from "node:process";
 import { CookingAgent, CookingAgentError, type CookingProgress } from "../application/cooking-agent";
 import { InvalidRecipeError } from "../domain/recipe-validation";
-import { GemmaProvider, GemmaProviderError } from "../infrastructure/gemma-provider";
+import { InvalidAdaptiveActionError } from "../domain/adaptive-action";
+import { GemmaProviderError } from "../infrastructure/gemma-provider";
+import { GeminiFlashLiteProviderError } from "../infrastructure/gemini-flash-lite-provider";
+import { selectProvider } from "../infrastructure/provider-selection";
+import { logInteractionTiming } from "../application/interaction-timing";
 
 function showProgress(progress: CookingProgress, first = false): void {
   if (!progress.currentStep) {
@@ -13,7 +17,9 @@ function showProgress(progress: CookingProgress, first = false): void {
 }
 
 async function main(): Promise<void> {
-  const agent = new CookingAgent(new GemmaProvider(process.env.GEMINI_API_KEY ?? "", process.env.GEMMA_MODEL));
+  const selected = selectProvider({ GEMINI_API_KEY: process.env.GEMINI_API_KEY, GEMMA_MODEL: process.env.GEMMA_MODEL,
+    LLM_PROVIDER: process.env.LLM_PROVIDER, LLM_MODEL: process.env.LLM_MODEL });
+  const agent = new CookingAgent(selected.provider, undefined, undefined, logInteractionTiming);
   const input = createInterface({ input: stdin, output: stdout, terminal: stdin.isTTY });
   let phase: "ingredients" | "proposal" | "cooking" | "completed" = "ingredients";
   console.log("Sous: Tell me which ingredients you have. Type help for commands or exit to quit.");
@@ -25,7 +31,7 @@ async function main(): Promise<void> {
       if (["exit", "quit"].includes(command)) break;
       try {
         if (command === "help") {
-          console.log("Sous: Enter ingredients, then yes to accept (or no to try new ingredients). During cooking: now/next/what do I do now?/what do I do next? reads the current step; done completes it and advances. Type exit to quit.");
+          console.log("Sous: Enter ingredients, then yes to accept (or no to try new ingredients). During cooking: now/next/what do I do now?/what do I do next? reads the current step; done completes it and advances. You can also describe missing ingredients, substitutions, changed portions, cooking problems, or work already done. Type exit to quit.");
         } else if (phase === "ingredients") {
           const proposal = await agent.proposeDish(line);
           console.log(`Sous: We can make ${proposal.dishName}. ${proposal.description} It takes about ${proposal.estimatedCookingMinutes} minutes and serves ${proposal.servings}. Would you like to make it?`);
@@ -49,14 +55,19 @@ async function main(): Promise<void> {
           } else if (["now", "next", "current", "what do i do now", "what do i do next", "what's next"].includes(command)) {
             showProgress(agent.getCurrentStep());
           } else {
-            console.log("Sous: Ask now/next for the current instruction, or say done to complete it.");
+            const result = await agent.adaptCooking(line);
+            console.log(`Sous: ${result.message}`);
+            if (result.session.status === "completed") {
+              phase = "completed";
+              showProgress(result);
+            }
           }
         } else {
           console.log("Sous: Your recipe is complete. Type exit to quit; restart the CLI for another meal.");
         }
       } catch (error) {
         // Only known, locally authored errors may be displayed; never raw provider errors.
-        if (error instanceof CookingAgentError || error instanceof InvalidRecipeError || error instanceof GemmaProviderError) {
+        if (error instanceof CookingAgentError || error instanceof InvalidRecipeError || error instanceof InvalidAdaptiveActionError || error instanceof GemmaProviderError || error instanceof GeminiFlashLiteProviderError) {
           console.log(`Sous: ${error.message}`);
         } else {
           console.log("Sous: Something went wrong. Please try again.");
@@ -70,6 +81,6 @@ async function main(): Promise<void> {
 }
 
 main().catch(() => {
-  console.error("Sous: Could not start. Set GEMINI_API_KEY in .env.local and use a valid GEMMA_MODEL if overriding the default.");
+  console.error("Sous: Could not start. Set GEMINI_API_KEY and check LLM_PROVIDER / LLM_MODEL (or GEMMA_MODEL for Gemma). Gemma remains the default; Gemini Flash-Lite is experimental.");
   process.exitCode = 1;
 });

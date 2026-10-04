@@ -24,7 +24,8 @@ export interface Recipe {
 
 export interface Substitution {
   originalIngredientId: string;
-  replacement: Ingredient;
+  /** Null records omission rather than replacement. */
+  replacement: Ingredient | null;
   reason?: string;
 }
 
@@ -40,7 +41,7 @@ export interface CookingTimer {
 
 export interface CookingSession {
   id: string;
-  /** A snapshot of the accepted recipe, including ingredient quantities. */
+  /** Active plan. Completed instructions and ingredients already used are retained. */
   recipe: Recipe;
   status: "ready" | "cooking" | "completed";
   /** Null before starting and after completing the recipe. */

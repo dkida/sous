@@ -1,0 +1,283 @@
+{
+  "groups": [
+    {
+      "provider": "gemma",
+      "model": "gemma-4-26b-a4b-it",
+      "scenario": "proposal",
+      "n": 3,
+      "success": 3,
+      "totalMs": {
+        "median": 11842.232806999993,
+        "min": 9037.752716999996,
+        "max": 12436.215285
+      },
+      "llmMs": {
+        "median": 11842.035183999978,
+        "min": 9037.56589899998,
+        "max": 12435.024267
+      },
+      "validationMs": {
+        "median": 0.07757699996000156,
+        "min": 0.06062400000519119,
+        "max": 0.707459999999628
+      },
+      "operationMs": {
+        "median": 0.05068099999334663,
+        "min": 0.042656000005081296,
+        "max": 0.1173240000007354
+      }
+    },
+    {
+      "provider": "gemma",
+      "model": "gemma-4-26b-a4b-it",
+      "scenario": "recipe",
+      "n": 3,
+      "success": 3,
+      "totalMs": {
+        "median": 116205.41441899998,
+        "min": 85245.97017,
+        "max": 117837.190404
+      },
+      "llmMs": {
+        "median": 116204.81219499995,
+        "min": 85244.845649,
+        "max": 117836.72459699996
+      },
+      "validationMs": {
+        "median": 0.18714499997440726,
+        "min": 0.13702900003409013,
+        "max": 0.6145680000045104
+      },
+      "operationMs": {
+        "median": 0.37040199991315603,
+        "min": 0.2985150000313297,
+        "max": 0.45601999999780674
+      }
+    },
+    {
+      "provider": "gemma",
+      "model": "gemma-4-26b-a4b-it",
+      "scenario": "missing-paste",
+      "n": 3,
+      "success": 3,
+      "totalMs": {
+        "median": 39404.308002000005,
+        "min": 33875.115257999976,
+        "max": 51719.704633999965
+      },
+      "llmMs": {
+        "median": 39399.781519,
+        "min": 33874.363035999995,
+        "max": 51718.881965000066
+      },
+      "validationMs": {
+        "median": 0.16034200007561594,
+        "min": 0.10733799997251481,
+        "max": 1.5309419999830425
+      },
+      "operationMs": {
+        "median": 0.6230330000398681,
+        "min": 0.47849899996072054,
+        "max": 2.573804999992717
+      }
+    },
+    {
+      "provider": "gemma",
+      "model": "gemma-4-26b-a4b-it",
+      "scenario": "scale-2-to-4",
+      "n": 3,
+      "success": 3,
+      "totalMs": {
+        "median": 36760.37268100004,
+        "min": 30278.354143000004,
+        "max": 44686.55446300004
+      },
+      "llmMs": {
+        "median": 36759.48681500007,
+        "min": 30276.744999999995,
+        "max": 44685.87784500001
+      },
+      "validationMs": {
+        "median": 0.19050200004130602,
+        "min": 0.14258699998026714,
+        "max": 0.19938899998669513
+      },
+      "operationMs": {
+        "median": 0.5436650000046939,
+        "min": 0.41397600003983825,
+        "max": 1.2182759999996051
+      }
+    },
+    {
+      "provider": "gemma",
+      "model": "gemma-4-26b-a4b-it",
+      "scenario": "burning-onions",
+      "n": 3,
+      "success": 3,
+      "totalMs": {
+        "median": 37694.35376300011,
+        "min": 24037.635699000006,
+        "max": 42672.53447499999
+      },
+      "llmMs": {
+        "median": 37693.57929700008,
+        "min": 24036.54019,
+        "max": 42671.63866
+      },
+      "validationMs": {
+        "median": 0.14764099998865277,
+        "min": 0.1376719999825582,
+        "max": 0.20571100001689047
+      },
+      "operationMs": {
+        "median": 0.5780919999815524,
+        "min": 0.5750209999969229,
+        "max": 0.7149379999900702
+      }
+    },
+    {
+      "provider": "gemini-flash-lite",
+      "model": "gemini-3.5-flash-lite",
+      "scenario": "proposal",
+      "n": 3,
+      "success": 3,
+      "totalMs": {
+        "median": 730.851147999987,
+        "min": 726.5127360000006,
+        "max": 888.1971389999962
+      },
+      "llmMs": {
+        "median": 730.6795900000143,
+        "min": 726.1285719999996,
+        "max": 888.049794999999
+      },
+      "validationMs": {
+        "median": 0.08149000001139939,
+        "min": 0.05901799999992363,
+        "max": 0.3151529999995546
+      },
+      "operationMs": {
+        "median": 0.04152299999987008,
+        "min": 0.038383000006433576,
+        "max": 0.05307100000209175
+      }
+    },
+    {
+      "provider": "gemini-flash-lite",
+      "model": "gemini-3.5-flash-lite",
+      "scenario": "recipe",
+      "n": 3,
+      "success": 3,
+      "totalMs": {
+        "median": 2166.620390999946,
+        "min": 1507.0565789999964,
+        "max": 2279.245723
+      },
+      "llmMs": {
+        "median": 2166.461101999972,
+        "min": 1506.1749560000026,
+        "max": 2278.417925000016
+      },
+      "validationMs": {
+        "median": 0.185444999995525,
+        "min": 0.04167599999345839,
+        "max": 0.2151560000202153
+      },
+      "operationMs": {
+        "median": 0.5770740000007208,
+        "min": 0.07576100004371256,
+        "max": 0.6549039999954402
+      }
+    },
+    {
+      "provider": "gemini-flash-lite",
+      "model": "gemini-3.5-flash-lite",
+      "scenario": "missing-paste",
+      "n": 3,
+      "success": 3,
+      "totalMs": {
+        "median": 1138.6029700000072,
+        "min": 1120.4466099999845,
+        "max": 1145.8923409999989
+      },
+      "llmMs": {
+        "median": 1137.2844909999985,
+        "min": 1119.5453780000098,
+        "max": 1145.0372009999992
+      },
+      "validationMs": {
+        "median": 0.12053299997933209,
+        "min": 0.11260299998684786,
+        "max": 0.1746049999492243
+      },
+      "operationMs": {
+        "median": 0.6429490000009537,
+        "min": 0.47173399999155663,
+        "max": 0.9795359999989159
+      }
+    },
+    {
+      "provider": "gemini-flash-lite",
+      "model": "gemini-3.5-flash-lite",
+      "scenario": "scale-2-to-4",
+      "n": 3,
+      "success": 3,
+      "totalMs": {
+        "median": 1176.2979540000088,
+        "min": 1013.0242599999765,
+        "max": 1190.0303509999649
+      },
+      "llmMs": {
+        "median": 1174.9452940000047,
+        "min": 1012.6154830000596,
+        "max": 1189.1913319999585
+      },
+      "validationMs": {
+        "median": 0.13978999998653308,
+        "min": 0.05710500001441687,
+        "max": 0.18503300001611933
+      },
+      "operationMs": {
+        "median": 0.5474800000083633,
+        "min": 0.19030500005465,
+        "max": 0.9083859999955166
+      }
+    },
+    {
+      "provider": "gemini-flash-lite",
+      "model": "gemini-3.5-flash-lite",
+      "scenario": "burning-onions",
+      "n": 3,
+      "success": 3,
+      "totalMs": {
+        "median": 967.4585130000487,
+        "min": 911.6265310000163,
+        "max": 1122.9354140000069
+      },
+      "llmMs": {
+        "median": 966.937024999992,
+        "min": 910.8158099999418,
+        "max": 1122.1441479999921
+      },
+      "validationMs": {
+        "median": 0.14824699994642287,
+        "min": 0.08528499997919425,
+        "max": 0.15365600000950508
+      },
+      "operationMs": {
+        "median": 0.4318599999824073,
+        "min": 0.3181979999644682,
+        "max": 0.4686239999718964
+      }
+    }
+  ],
+  "providerShareOfTotalDuration": 0.9999632246707254,
+  "promptHashCounts": {
+    "proposal": 1,
+    "recipe": 1,
+    "missing-paste": 1,
+    "scale-2-to-4": 1,
+    "burning-onions": 1
+  },
+  "nativeSchemaProbeExcluded": true
+}
