@@ -1,0 +1,18 @@
+{
+  "language": "pl",
+  "inputKind": "ElevenLabs synthesized Polish phrase, uploaded through shared browser STT function in Node; not physical microphone",
+  "transcript": "Mam też cebulę",
+  "response": {
+    "kind": "clarification",
+    "message": "Czy chcesz dodać cebulę do jajecznicy?"
+  },
+  "timing": {
+    "proposalMs": 1270.37889,
+    "recipeMs": 1610.8005649999998,
+    "sttMs": 587.184072,
+    "agentMs": 841.8873949999997,
+    "ttsBufferedMs": 252.84781400000065,
+    "pipelineMs": 1681.979206
+  },
+  "audioBytes": 37661
+}

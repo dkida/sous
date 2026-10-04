@@ -8,9 +8,166 @@ Product source of truth: [PROJECT.md](PROJECT.md).
 
 [Task 1](TASK1.md), [Task 2](TASK2.md), and [Task 3](TASK3.md) are complete.
 [Task 4](TASK4.md) is complete: the responsive web interface exposes the existing
-cooking agent. Task 5 has not been started.
+cooking agent. Task 5 is complete; the user reports voice is working. Task 5.1
+English/Polish support is complete, including live Polish cooking and provider
+verification. Task 5.2 is implemented and passes automated checks; the preview
+is restored, with remaining manual mobile checks documented below. English remains the public
+demo default. Task 6 has not been started.
+
+## Task 5.2 — Unified cooking composer
+
+Implemented the UI refinement with one square, ruled Ask Sous composer inside the
+existing dark Pass interaction area. Text, microphone and send share the existing
+screen callbacks. The separate voice panel, permanent instructional text and
+“Heard” transcript are removed. Recognized speech temporarily occupies the
+composer during processing/playback and clears at idle, cancellation or failure.
+
+- Listening shows a restrained accent rule, concise status, generous Stop action
+  (finishes/sends) and Cancel. Transcribing/thinking/speaking are inline statuses;
+  speaking exposes Stop. Recoverable errors keep the text draft and controls
+  available. Detailed existing voice errors remain accessible.
+- Mic/send targets are at least 56×56 px. Text enables the accent send action.
+  Enter sends; Shift+Enter inserts a newline; IME composition cannot accidentally
+  submit. Busy/voice requests retain the existing lock and sequencing protection.
+- Removed Show current step from primary controls because the instruction is
+  already prominent. Typed/spoken repeat/current commands still work. Done · next
+  follows the composer on desktop and remains a single large mobile bottom action.
+  Final voice playback retains its Stop control even after cooking completes.
+- CookingAgent, domain semantics, provider selection and ElevenLabs integration
+  are untouched by Task 5.2. No continuous listening, chat history or Task 6 work.
+
+Verification on 2026-10-04:
+
+- Preview recovery: cleared the expired in-memory session after the dev-server
+  restart and restored the user's ingredient draft. Verified Find something to
+  cook is enabled. Disabled buttons now show a blocked cursor; the waiting cursor
+  is reserved for an actual cooking request in progress.
+- `npm test`: **191 tests passed**; `npm run typecheck` and `npm run build` passed.
+  Re-ran all 191 tests and typecheck before committing. A fresh production build
+  also passed with `npm run build -- --webpack` in an isolated temporary copy,
+  avoiding disruption of the active preview. The earlier default Turbopack build
+  passed as well.
+  Added composer interaction checks for keyboard/IME behavior, send availability,
+  active transcript lifecycle, listening/speaking actions and recoverable errors.
+  Client/server boundary verification also traverses the new TSX component.
+- Used an isolated temporary harness rendering the actual CookingScreen/composer,
+  with native MediaRecorder fed synthesized test audio. Requests reached the real
+  local cooking/voice endpoints, live Flash-Lite and ElevenLabs STT/TTS. Test-only
+  transport holds exposed intermediate states; no debug controls enter the app.
+- Manually verified typed two-line input (Shift+Enter then Enter), listening,
+  Stop-to-submit, transcribing, temporary recognized question, thinking, actual
+  browser speech playback and Stop-to-cancel. Transcript cleared, and text/mic
+  controls were available afterward. See
+  [desktop thinking](design/task52-verification/desktop-thinking.jpg),
+  [listening](design/task52-verification/desktop-listening.jpg),
+  [transcribing](design/task52-verification/desktop-transcribing.jpg),
+  [voice thinking](design/task52-verification/desktop-voice-thinking.jpg),
+  [speaking](design/task52-verification/desktop-speaking.jpg).
+- Inspected 1440×1000 desktop and 390×844 mobile layouts. Mobile had no horizontal
+  overflow and mic/send measured 56×56 px. A local-server interruption produced
+  an inline recoverable voice error with the instruction unchanged and controls
+  available: [mobile fallback](design/task52-verification/mobile-network-error.jpg).
+- The temporary browser harness server stopped during mobile verification. Its
+  tab became a connection-error `data:` page, which browser URL policy prevents
+  automation from operating. The regular demo was restarted and reopened at
+  `http://127.0.0.1:3005/`. Verified expired-session recovery, restored the user's
+  ingredient draft, and observed the resulting live Polish cooking screen with
+  the unified composer. Final mobile listening/typed recovery and manual
+  Done · next checks are not recorded as verified yet; the user's active cooking
+  session was left intact.
+- Physical microphone speech, physical phones and Safari were not tested by the
+  agent; the user reports Task 5 voice is working. No ambient audio or secrets
+  were submitted during these checks.
+
+## Task 5.1 — English / Polish
+
+- Added a restrained EN / PL header switch and a small typed copy dictionary.
+  Static UI, status/voice/error messages, clarification labels, completion,
+  accessibility labels, counts, and ingredient presentation support both languages.
+  The document language follows the selection. English is the initial default.
+- Language is fixed presentation context on the retained web flow and existing
+  `CookingAgent`, not duplicated domain state. Proposal, recipe and adaptive
+  prompts explicitly request the selected language for all human-readable output.
+  Structured JSON keys, IDs, action types and standard unit codes remain unchanged.
+  Gemma, Flash-Lite and `LLMProvider` architecture remain intact.
+- Selection locks during requests and once a flow/proposal exists, including after
+  completion. Start over / Cook something else removes the flow and unlocks it.
+  Reload restores the retained flow language. No locale persistence, routing,
+  accounts, automatic detection or recipe translation/regeneration was added.
+- Polish deterministic input (`gotowe`, `zrobione`, `dalej`, `powtórz`,
+  `pokaż bieżący krok`, `co teraz`, `co dalej`) resolves to the same guarded domain
+  commands. `tak` / `nie` stay adaptive clarification answers. Behavior never
+  depends on translated button labels.
+- The existing ElevenLabs integrations explicitly use STT `eng` / `pol` with
+  Scribe v2 and TTS `en` / `pl` with Flash v2.5. TTS language is resolved from the
+  authoritative retained session. Credentials, token authentication, microphone
+  lifecycle, cancellation, request/revision guards and playback are shared.
+  No new environment variables or credential changes were required.
+
+Verification on 2026-10-04:
+
+- `npm test`: **187 tests passed**. Added English/Polish rendering, prompt/context,
+  Polish recipe/clarification/advice/adaptation, immutable language, shared domain
+  quantity/progression operations, stale guards, localizable errors, ingredient
+  formatting, STT/TTS configuration and Polish voice-failure coverage.
+- `npm run typecheck` and `npm run build` passed; `git diff --check` passed.
+- Manually exercised the production build with live Gemini Flash-Lite entirely
+  in Polish: ingredients → “Jajecznica na oleju” → four cooking steps →
+  “Mam też cebulę.” → Polish clarification → “Tak, dodaj cebulę.” → updated plan →
+  current-step read → typed “Gotowe.” → button progression → Polish completion.
+  Reload preserved Polish; reset unlocked the switch; English entry still rendered
+  correctly. This was a simulated cooking workflow, not preparation of a meal.
+- Inspected desktop 1440×1000 and mobile 390×844 / 320×740 views. The header switch,
+  dark interaction strip and fixed mobile actions remain usable; no horizontal
+  overflow was observed. Narrow-phone labels use the existing ruled layout.
+  [Desktop](design/task51-verification/desktop-polish.jpg),
+  [mobile cooking](design/task51-verification/mobile-polish.jpg),
+  [mobile completion](design/task51-verification/mobile-complete.jpg),
+  [narrow entry](design/task51-verification/mobile-entry-320.jpg).
+- Real ElevenLabs Polish TTS generated a synthetic input phrase; the shared STT
+  function recognized “Mam też cebulę”. The actual cooking endpoint replied
+  “Czy chcesz dodać cebulę do jajecznicy?” and its retained speech handle produced
+  Polish MP3 audio. STT **587 ms**, agent **842 ms**, buffered TTS **253 ms**;
+  total **1.68 s**, excluding input synthesis/capture and response playback.
+  This check used Node with the browser STT function and real HTTP endpoints;
+  it did not test physical Polish microphone speech or browser playback.
+  [Measurements](design/task51-verification/live-metrics.json) and
+  [generated response](design/task51-verification/polish-response.mp3).
+- Provider documentation rechecked for explicit ISO language hints and Polish
+  model support; see [VOICE.md](VOICE.md). No secrets were displayed or modified.
 
 ## Completed
+
+- Implemented Task 5 push-to-talk in the existing dark Pass / Mise en place strip,
+  with idle/listening/transcribing/thinking/speaking/error labels, secondary
+  transcript, Speak, Finish & send, Cancel, and Stop speech controls. Typed
+  interaction and deterministic buttons remain functional after voice failures.
+- Verified current ElevenLabs documentation before choosing authentication/APIs.
+  The server issues supported single-use `batch_scribe` tokens; the browser sends
+  short MediaRecorder captures directly to Scribe v2. Server-side HTTP TTS uses
+  Flash v2.5 and forwards MP3 audio for ordinary browser playback. Long-lived keys
+  never enter browser code. Speech endpoints resolve retained cooking-response
+  handles rather than accepting arbitrary text. See [VOICE.md](VOICE.md).
+- Voice transcripts use the same web `send` function, cooking HTTP endpoint,
+  retained `CookingAgent`, clarification context and domain operations as typed
+  messages. Exact done/complete and current/next/repeat commands share one web
+  resolver and bypass inference. CookingAgent, LLMProvider, Gemma/Flash-Lite
+  adapters, provider selection and the cooking domain are unchanged.
+- Added per-flow revisions and bounded duplicate-request IDs around existing
+  server busy/expected-step/agent stale-state guards. A recording cannot apply
+  after another tab changes the same step or clarification. Browser turn generations,
+  abort signals and response sequences reject stale asynchronous callbacks.
+  Speech requests reject stale handles and synthesis invalidated during preparation.
+- Added microphone track cleanup on finish, cancellation, errors, hide/teardown
+  and late permission grants; a 30-second capture limit and 5 MB cap; one voice
+  turn/audio playback at a time; and concise sanitized errors. TTS failure never
+  rolls back an already successful cooking operation. No wake word/background
+  listening or Task 6 behavior was added.
+- Added development-only voice timing for capture/completion, STT, cooking-agent
+  HTTP latency, TTS-to-first-playback and total turn duration. Metrics contain
+  fixed phase/outcome labels and times, never audio, transcript, prompts or keys.
+  Documented `ELEVENLABS_API_KEY` and optional `ELEVENLABS_VOICE_ID`, browser/server
+  responsibilities, provider/browser limitations and remaining live checks.
 
 - Added a subordinate Start over control beneath cooking recipe metadata, using
   the existing server reset action and clearing both input fields. Verified the
@@ -154,6 +311,83 @@ cooking agent. Task 5 has not been started.
   preserved; their source hashes were checked before and after implementation.
 
 ## Validation
+
+Task 5 live-provider follow-up (2026-10-04):
+
+- The user configured the ElevenLabs key through local environment files. Verified
+  configuration by presence only and successfully exercised the default voice.
+  No secret values were displayed or modified by the agent.
+- Four real in-app browser voice turns passed using synthesized test utterances
+  encoded through Web Audio/MediaRecorder as WebM/Opus: missing tomato paste,
+  burning onions, carrot clarification, and spoken “yes”. Used the actual browser
+  `VoiceTurn`, direct ElevenLabs STT with server-issued batch tokens, existing
+  cooking HTTP/agent path and ElevenLabs TTS browser playback. Browser CORS and
+  single-use authentication worked; every turn traversed all five active/idle
+  states and playback ended normally. No cooking/provider architecture changed.
+- Missing-paste input removed the unused paste and spoke the result. Burning-onion
+  input at the saute step spoke immediate advice to remove the pan from heat.
+  Clarification spoke “Do you want to use all three carrots in the recipe?” and
+  retained one carrot; recognized “Yes” then updated the quantity to three and
+  revised future instructions. Completed preparation/pasta history was preserved.
+- One sample each: STT 536–856 ms; cooking HTTP 895–1231 ms; TTS to actual playback
+  306–808 ms. The sum of these post-capture phases was 1843–2658 ms. Capture took
+  836–5848 ms; recording completion 2.5–5.4 ms. Activation to first audio was
+  3078–7961 ms, including synthetic utterance duration and fixture preparation.
+  These functional samples use Flash-Lite selected only through server environment
+  overrides; they are not a representative microphone/noisy-kitchen benchmark.
+  Full table and method: [VOICE.md](VOICE.md); [records](design/task5-verification/live-metrics.json).
+- Simulated browser STT failure preserved the entire live session and restored
+  controls; [record](design/task5-verification/live-failure.json). Actual Sous
+  desktop/mobile Speak → Cancel restored typing/buttons without submitting
+  ambient microphone audio. Typed fallback continued to reach the same agent.
+  Configured-state evidence: [desktop listening](design/task5-verification/desktop-listening.jpg),
+  [mobile listening](design/task5-verification/mobile-listening.jpg).
+- All 178 mocked tests passed again; typecheck, production build, diff and
+  client-secret checks passed. Temporary browser test assets were removed.
+- Physical microphone spoken input, acoustic speaker output and Safari/physical
+  mobile-device behavior remain unverified. The browser checks verified actual
+  audio playback events through completion, rather than human assessment of sound.
+  The user was asked to try “repeat” through Speak/Finish on their own device.
+  Task 6 has not been started.
+
+Task 5 implementation (2026-10-04):
+
+- `npm test`: all 178 tests passed (155 existing plus 23 voice tests). New tests
+  mock providers/network and cover shared typed/STT routing, adaptation,
+  clarification questions/voice answers, authoritative TTS text, STT/TTS failure
+  semantics, deterministic commands/completion, duplicate/concurrent submissions,
+  stale same-step/session/synthesis responses, microphone denial/late permission,
+  capture cleanup, playback URL cleanup, automatic recording limit, origin/session
+  checks and sanitized errors. Tests never load credentials or consume credits.
+  Existing CLI subprocess tests required approved execution outside the sandbox.
+- `npm run typecheck`, `npm run build`, and `git diff --check` passed. Production
+  includes Node.js cooking, token and speech routes. Client import-boundary tests
+  include ElevenLabs configuration identifiers; browser bundles contain no
+  ElevenLabs/LLM credential or provider configuration identifiers.
+- Manually tested the development app with Flash-Lite selected only through
+  process environment overrides: ingredients → proposal → acceptance → cooking.
+  With ElevenLabs configuration absent, Speak on desktop/mobile returned the
+  concise voice-unavailable error and restored all cooking controls. Typed
+  missing-paste input then updated the remaining recipe and removed the unused
+  paste. Typed `next` retained the current step; Done advanced. A subsequent typed
+  three-onion correction updated the quantity/current/future instructions while
+  retaining completed pasta. No browser warning/error logs were observed.
+- Inspected desktop 1440 × 1000, mobile 390 × 844 and narrow mobile 320 × 740.
+  The cream instruction surface, dark strip, restrained accent and fixed mobile
+  deterministic dock are preserved. Voice controls remain in the strip with
+  56 px mobile Speak targets; both mobile sizes had no horizontal overflow.
+  Evidence: [desktop fallback](design/task5-verification/desktop-fallback.jpg) and
+  [mobile fallback](design/task5-verification/mobile-fallback.jpg).
+- **Initial implementation verification had no key.** Presence-only checks of the normal local
+  environment found no `ELEVENLABS_API_KEY`; configuration was requested through
+  the existing untracked `.env.local` workflow. No secret values were printed,
+  inspected, changed or committed. Real microphone→STT, TTS playback, complete
+  adaptive voice scenarios A–C and real voice latency were therefore not verified.
+  Missing-configuration fallback was verified in-browser; denial, STT failure and
+  TTS failure were verified with mocks. No real provider latency numbers are
+  claimed for that initial run. The live-provider follow-up above supersedes this
+  configuration limitation; physical-device capture and Safari remain unverified.
+
 
 Task 4 manual-testing follow-up (2026-10-04):
 
@@ -453,6 +687,14 @@ The following checks passed after Step 2 implementation:
 - Production cookies require HTTPS outside trustworthy localhost contexts.
   Deployment and multi-instance hosting are outside this milestone.
 - Timer scheduling is not implemented.
+- Voice requires local ElevenLabs configuration. The configured account’s browser
+  STT/TTS path has been verified with synthesized input; physical-device validation
+  remains.
+  Batch STT waits for recording completion; short TTS MP3s are buffered before
+  playback. Provider CORS/quota/accuracy and browser microphone/autoplay policies
+  can affect availability and latency. Hiding the page cancels local voice work.
+  Voice operates during active cooking; initial ingredients/proposal acceptance
+  retain their existing text/button flow. See [VOICE.md](VOICE.md).
 - Gemma JSON generation is prompted, not guaranteed by server-side constrained
   decoding. Runtime validation rejects malformed/incompatible responses;
   the user can retry. No automatic retries are implemented.
@@ -481,10 +723,13 @@ The following checks passed after Step 2 implementation:
 ## Intentionally out of scope
 
 - Timer scheduling and unrestricted model-directed state replacement.
-- Voice, speech-to-text/text-to-speech, push-to-talk, hands-free use and wake words.
+- Hands-free use, wake words, always-on/background listening and Task 6.
 - Database, authentication and deployment.
-- Task 5 / voice implementation.
 
-## Next milestone: voice
+## Remaining Task 5 verification
 
-Task 4 is complete. Task 5 remains unstarted; no voice behavior has been added.
+Real STT, TTS, adaptive and clarification voice turns and phase latency are verified
+with synthesized input. The user reports Task 5 voice is working. Physical Polish microphone speech,
+Safari and physical mobile devices have not been tested by the agent; no
+ambient microphone audio was submitted during automated/manual agent checks.
+Task 6 has not been started.

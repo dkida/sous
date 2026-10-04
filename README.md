@@ -32,10 +32,19 @@ or consume model credits.
 
 ## Web cooking flow
 
+Choose **EN / PL** in the header before requesting a dish. English is the default.
+The selection covers interface copy, cooking responses and ElevenLabs voice; it
+locks until **Start over** / **Cook something else**. Polish exact commands such as
+**gotowe** and **powtórz** share the existing completion/current-step logic. No
+additional environment variables are required.
+
 Enter ingredients, review one proposed dish, then select **Let’s cook**. The
 current instruction and relevant ingredient quantities dominate the cooking
-surface. **Done · next** completes that step; **Show current step** reads the
-server state without advancing or making a model call. Type missing ingredients,
+surface. **Done · next** completes that step. The dark **Ask Sous** composer combines
+multiline text, a microphone action and send. Enter sends; Shift+Enter adds a
+newline. Use the microphone, then **Stop** to send a recording; **Cancel** discards
+it. Listening, processing, speech and recoverable errors appear inside the
+composer. Type missing ingredients,
 changed portions, cooking problems or questions in the dark action strip. Sous
 returns a concise response and the authoritative updated plan. Complete the last
 step to finish, then choose **Cook something else** to reset.
@@ -45,7 +54,7 @@ Desktop keeps the full ingredient list in a right sidebar, expanded by default,
 with servings as secondary metadata. Adaptive feedback sits directly after the
 current-step quantities. Mobile has a vertical cooking layout, a collapsible
 full ingredient list and a fixed bottom action dock. There are
-no microphone controls, fake timer controls or inferred heat badges.
+no fake timer controls or inferred heat badges.
 
 The existing provider configuration also applies to the web server. For example,
 to opt into the experimental Flash-Lite adapter without changing any files:
@@ -67,8 +76,8 @@ Production cookies are Secure; use HTTPS outside localhost. Deployment is not
 part of Task 4.
 
 Model failures preserve state and typed input for retry. A connection interruption
-can occur after a server operation has succeeded; **Show current step** refreshes
-the confirmed state, and completion requests carry the expected step ID so a retry
+can occur after a server operation has succeeded; typing **current** (English) or
+**powtórz** (Polish) refreshes the confirmed state, and completion requests carry the expected step ID so a retry
 cannot accidentally advance another step. The UI displays the latest response,
 not a chat transcript. Step timing and heat are only shown when present in the
 actual instruction; they are not structured fields in the current domain.
@@ -328,3 +337,14 @@ Each store instance is separate. Sessions are lost when the instance or process
 is discarded and are not shared between processes. The web server retains each
 agent/store in its process-global service across requests; the CLI retains its
 agent for the terminal session.
+
+## Voice during cooking
+
+Task 5 provides explicit push-to-talk in the unified Ask Sous composer. Use its
+microphone action, then **Stop** to finish and send; use **Cancel** to discard
+capture or **Stop** during playback. Typed questions and cooking buttons remain available after any failure.
+
+Configure `ELEVENLABS_API_KEY` in your untracked `.env.local` and restart Next.js.
+Optionally set `ELEVENLABS_VOICE_ID` to choose a voice. Both are server settings;
+never prefix the key with `NEXT_PUBLIC_`. Existing LLM provider settings and Gemma
+support are unchanged. See [voice architecture, timing and verification](docs/VOICE.md).

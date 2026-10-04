@@ -1,0 +1,269 @@
+{
+  "date": "2026-10-04",
+  "input": "ElevenLabs-synthesized phrases re-encoded by browser MediaRecorder; no physical microphone",
+  "llm": "gemini-flash-lite / gemini-3.5-flash-lite",
+  "results": [
+    {
+      "scenario": "missing",
+      "transcript": "I don't have tomato paste",
+      "response": "Omit the tomato paste. You can add an extra splash of canned tomatoes or a pinch of sugar to balance the flavor if needed.",
+      "kind": "changed",
+      "states": [
+        "listening",
+        "transcribing",
+        "thinking",
+        "speaking",
+        "idle"
+      ],
+      "metrics": {
+        "captureCompletionMs": 5.399999998509884,
+        "captureMs": 1909.6000000014901,
+        "sttMs": 687,
+        "agentMs": 1163.6000000014901,
+        "ttsPlayableMs": 807.6000000014901,
+        "totalToAudioMs": 4600.69999999553,
+        "outcome": "success",
+        "totalMs": 12219.09999999404
+      },
+      "responseWaitMs": 2691,
+      "completedBefore": [],
+      "completedAfter": [],
+      "ingredients": [
+        {
+          "name": "pasta",
+          "quantity": 200
+        },
+        {
+          "name": "onion",
+          "quantity": 1
+        },
+        {
+          "name": "garlic cloves",
+          "quantity": 2
+        },
+        {
+          "name": "carrot",
+          "quantity": 1
+        },
+        {
+          "name": "canned tomatoes",
+          "quantity": 400
+        },
+        {
+          "name": "olive oil",
+          "quantity": 2
+        },
+        {
+          "name": "parmesan",
+          "quantity": 30
+        },
+        {
+          "name": "salt",
+          "quantity": null
+        }
+      ],
+      "current": "Finely chop the onion, mince the garlic cloves, and dice the carrot."
+    },
+    {
+      "scenario": "burning",
+      "transcript": "The onions are burning",
+      "response": "Remove the pan from the heat immediately and stir in a splash of water or oil to stop the burning.",
+      "kind": "advice",
+      "states": [
+        "listening",
+        "transcribing",
+        "thinking",
+        "speaking",
+        "idle"
+      ],
+      "metrics": {
+        "captureCompletionMs": 4.299999997019768,
+        "captureMs": 1529.6000000014901,
+        "sttMs": 642,
+        "agentMs": 895.2999999970198,
+        "ttsPlayableMs": 305.79999999701977,
+        "totalToAudioMs": 3420.7999999970198,
+        "outcome": "success",
+        "totalMs": 9061
+      },
+      "responseWaitMs": 1891,
+      "completedBefore": [
+        "step-1",
+        "step-2"
+      ],
+      "completedAfter": [
+        "step-1",
+        "step-2"
+      ],
+      "ingredients": [
+        {
+          "name": "pasta",
+          "quantity": 200
+        },
+        {
+          "name": "onion",
+          "quantity": 1
+        },
+        {
+          "name": "garlic cloves",
+          "quantity": 2
+        },
+        {
+          "name": "carrot",
+          "quantity": 1
+        },
+        {
+          "name": "canned tomatoes",
+          "quantity": 400
+        },
+        {
+          "name": "olive oil",
+          "quantity": 2
+        },
+        {
+          "name": "parmesan",
+          "quantity": 30
+        },
+        {
+          "name": "salt",
+          "quantity": null
+        }
+      ],
+      "current": "Heat olive oil in a pan over medium heat, add the chopped onion, and saute until translucent."
+    },
+    {
+      "scenario": "clarification",
+      "transcript": "I actually have three carrots. Before changing anything, ask me if I want to use all three",
+      "response": "Do you want to use all three carrots in the recipe?",
+      "kind": "clarification",
+      "states": [
+        "listening",
+        "transcribing",
+        "thinking",
+        "speaking",
+        "idle"
+      ],
+      "metrics": {
+        "captureCompletionMs": 4.799999997019768,
+        "captureMs": 5848.29999999702,
+        "sttMs": 855.8999999985099,
+        "agentMs": 908,
+        "ttsPlayableMs": 309.5,
+        "totalToAudioMs": 7961.10000000149,
+        "outcome": "success",
+        "totalMs": 10779.19999999553
+      },
+      "responseWaitMs": 2113,
+      "completedBefore": [
+        "step-1",
+        "step-2"
+      ],
+      "completedAfter": [
+        "step-1",
+        "step-2"
+      ],
+      "ingredients": [
+        {
+          "name": "pasta",
+          "quantity": 200
+        },
+        {
+          "name": "onion",
+          "quantity": 1
+        },
+        {
+          "name": "garlic cloves",
+          "quantity": 2
+        },
+        {
+          "name": "carrot",
+          "quantity": 1
+        },
+        {
+          "name": "canned tomatoes",
+          "quantity": 400
+        },
+        {
+          "name": "olive oil",
+          "quantity": 2
+        },
+        {
+          "name": "parmesan",
+          "quantity": 30
+        },
+        {
+          "name": "salt",
+          "quantity": null
+        }
+      ],
+      "current": "Heat olive oil in a pan over medium heat, add the chopped onion, and saute until translucent."
+    },
+    {
+      "scenario": "answer",
+      "transcript": "Yes",
+      "response": "Updating carrot quantity to 3 whole carrots as requested. Since step-1 is already completed, dice the 2 additional carrots now before proceeding.",
+      "kind": "changed",
+      "states": [
+        "listening",
+        "transcribing",
+        "thinking",
+        "speaking",
+        "idle"
+      ],
+      "metrics": {
+        "captureCompletionMs": 2.5,
+        "captureMs": 835.5,
+        "sttMs": 536,
+        "agentMs": 1230.5999999940395,
+        "ttsPlayableMs": 433,
+        "totalToAudioMs": 3077.7999999970198,
+        "outcome": "success",
+        "totalMs": 12022.5
+      },
+      "responseWaitMs": 2242,
+      "completedBefore": [
+        "step-1",
+        "step-2"
+      ],
+      "completedAfter": [
+        "step-1",
+        "step-2"
+      ],
+      "ingredients": [
+        {
+          "name": "pasta",
+          "quantity": 200
+        },
+        {
+          "name": "onion",
+          "quantity": 1
+        },
+        {
+          "name": "garlic cloves",
+          "quantity": 2
+        },
+        {
+          "name": "carrot",
+          "quantity": 3
+        },
+        {
+          "name": "canned tomatoes",
+          "quantity": 400
+        },
+        {
+          "name": "olive oil",
+          "quantity": 2
+        },
+        {
+          "name": "parmesan",
+          "quantity": 30
+        },
+        {
+          "name": "salt",
+          "quantity": null
+        }
+      ],
+      "current": "Heat olive oil in a pan over medium heat, add the chopped onion, and saute until translucent."
+    }
+  ]
+}

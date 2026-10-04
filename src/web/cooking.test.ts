@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { it } from "node:test";
 import { NextRequest } from "next/server";
@@ -160,12 +160,13 @@ it("client runtime imports contain no providers, server services or credential r
     if (visited.has(file)) return;
     visited.add(file);
     const source = readFileSync(file, "utf8");
-    assert.doesNotMatch(source, /GEMINI_API_KEY|GEMMA_MODEL|LLM_PROVIDER|LLM_MODEL|process\.env|selectProvider/);
+    assert.doesNotMatch(source, /GEMINI_API_KEY|GEMMA_MODEL|LLM_PROVIDER|LLM_MODEL|ELEVENLABS_API_KEY|ELEVENLABS_VOICE_ID|process\.env|selectProvider/);
     for (const match of source.matchAll(/import\s+(?!type\b)[^;]*?from\s+["']([^"']+)["']/g)) {
       const path = match[1]!;
       if (!path.startsWith(".")) continue;
       assert.doesNotMatch(path, /infrastructure|application|web\/server|cooking-service/);
-      visit(resolve(dirname(file), `${path}.ts`));
+      const resolved = resolve(dirname(file), path);
+      visit(existsSync(`${resolved}.ts`) ? `${resolved}.ts` : `${resolved}.tsx`);
     }
   }
   visit(resolve("src/app/cooking-screen.tsx"));
