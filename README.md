@@ -3,8 +3,8 @@
 The product source of truth is [docs/PROJECT.md](docs/PROJECT.md).
 
 Tasks 1–3 provide a text cooking agent with adaptive cooking and a terminal
-interface over the framework-independent cooking domain. The web page remains
-a placeholder.
+interface over the framework-independent cooking domain. Task 4 exposes the same
+agent through a responsive, state-first cooking interface.
 
 ## Development
 
@@ -15,7 +15,8 @@ npm ci
 npm run dev
 ```
 
-Open http://localhost:3000 for the placeholder page.
+Set `GEMINI_API_KEY` in your untracked `.env.local`, then open
+http://localhost:3000 to cook. Next.js loads the server environment automatically.
 
 ```sh
 npm test
@@ -28,6 +29,49 @@ in one process with separate stores. The CLI integration test starts an isolated
 child process with a fictional credential and mocked HTTP. All model calls and
 HTTP requests are mocked: tests do not load local credentials, access the network,
 or consume model credits.
+
+## Web cooking flow
+
+Enter ingredients, review one proposed dish, then select **Let’s cook**. The
+current instruction and relevant ingredient quantities dominate the cooking
+surface. **Done · next** completes that step; **Show current step** reads the
+server state without advancing or making a model call. Type missing ingredients,
+changed portions, cooking problems or questions in the dark action strip. Sous
+returns a concise response and the authoritative updated plan. Complete the last
+step to finish, then choose **Cook something else** to reset.
+
+The visual source of truth is [docs/DESIGN.md](docs/DESIGN.md) and its reference.
+Desktop keeps the full ingredient list in a right sidebar, expanded by default,
+with servings as secondary metadata. Adaptive feedback sits directly after the
+current-step quantities. Mobile has a vertical cooking layout, a collapsible
+full ingredient list and a fixed bottom action dock. There are
+no microphone controls, fake timer controls or inferred heat badges.
+
+The existing provider configuration also applies to the web server. For example,
+to opt into the experimental Flash-Lite adapter without changing any files:
+
+```sh
+LLM_PROVIDER=gemini-flash-lite LLM_MODEL=gemini-3.5-flash-lite npm run dev
+```
+
+Gemma remains the default. There is no browser provider selector or automatic
+fallback. Credentials and model calls stay server-side.
+
+`/api/cooking` uses uncached GET snapshots and validated POST commands. A private
+browser cookie identifies one process-local agent and its existing in-memory
+store, retaining proposals and clarification context across requests and page
+reloads. Restarting the server loses sessions; separate processes do not share
+state. Use **Start again** if your session has expired. Reset removes the old
+flow. No database, authentication or browser recipe persistence is added.
+Production cookies are Secure; use HTTPS outside localhost. Deployment is not
+part of Task 4.
+
+Model failures preserve state and typed input for retry. A connection interruption
+can occur after a server operation has succeeded; **Show current step** refreshes
+the confirmed state, and completion requests carry the expected step ID so a retry
+cannot accidentally advance another step. The UI displays the latest response,
+not a chat transcript. Step timing and heat are only shown when present in the
+actual instruction; they are not structured fields in the current domain.
 
 ## Text cooking flow
 
@@ -209,7 +253,7 @@ cannot replace a session, choose its lifecycle status, or edit timers or history
 
 | Action | Payload and operation |
 | --- | --- |
-| `ingredient_change` | Original ingredient ID, replacement ingredient (null for omission), reason, remaining step updates and additional ingredients → `changeIngredient` |
+| `ingredient_change` | Original ingredient ID, replacement ingredient (null for omission), reason, remaining step updates and additional ingredients → `changeIngredient`; same-ingredient quantity corrections update the canonical ingredient in place |
 | `scale_servings` | Positive integer servings, exceptions to scaling, remaining step updates and additional ingredients → `scaleServings` |
 | `cooking_problem` | Advice plus remaining step updates and additional ingredients → `adjustCookingInstructions`; empty arrays mean advice only |
 | `reconcile_progress` | Step IDs with exact quotes from the latest user message → `reconcileProgress` |
@@ -221,10 +265,25 @@ invented evidence are rejected. Operations validate on a copy and commit once;
 an invalid action cannot leave a partially changed session. The agent rejects
 overlapping operations and responses whose session context changed during inference.
 
-Completed instructions and ingredient references stay unchanged. Any ingredient
-referenced in a completed step keeps its recorded quantity and identity, even
-when also referenced later. Scaling multiplies only unused numeric quantities
-by the new/old servings ratio; unspecified quantities and explicit exceptions
+Completed instructions and ingredient references stay unchanged. An explicit
+same-ingredient quantity correction (for example, use three carrots instead of
+one) updates the canonical ingredient total under its existing ID. It does not
+append another recipe ingredient or fabricate a substitution. The previous
+ingredient snapshot and completed-step prefix are retained separately in
+`quantityChanges`, allowing the agent to distinguish the new plan from physical
+history. Every affected remaining instruction must be explicitly revised; failed
+corrections roll back both quantity and history. Legacy responses with a fresh ID
+for the same canonical name are mapped back to the original ID. Count-unit aliases
+are accepted, while ambiguous unit conversions are rejected. Same-named duplicate
+additions are rejected; deliberate extra lots use distinct descriptive names.
+
+The UI formats canonical count data such as `{name: "carrot", quantity: 3,
+unit: "piece"}` as **3 carrots**, using a bounded English presentation formatter.
+It does not mutate domain data or hide duplicates in the ingredient list.
+
+Outside explicit quantity corrections, ingredients referenced in a completed step
+keep their recorded quantity and identity. Scaling multiplies only unused numeric
+quantities by the new/old servings ratio; unspecified quantities and explicit exceptions
 remain unchanged. Gemma can add distinct ingredients with explicit quantities
 and revise remaining instructions to compensate for amounts already used.
 Substitutions are recorded, including omissions; used originals are retained
@@ -266,5 +325,6 @@ operations throw without changing state; fetching an unknown session returns
 `undefined`. Inputs and returned snapshots are copied to protect stored state.
 
 Each store instance is separate. Sessions are lost when the instance or process
-is discarded and are not shared between processes. No route or UI is wired to
-the store yet.
+is discarded and are not shared between processes. The web server retains each
+agent/store in its process-global service across requests; the CLI retains its
+agent for the terminal session.

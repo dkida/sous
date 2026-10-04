@@ -7,9 +7,69 @@ Product source of truth: [PROJECT.md](PROJECT.md).
 ## Current milestone
 
 [Task 1](TASK1.md), [Task 2](TASK2.md), and [Task 3](TASK3.md) are complete.
-The next milestone is web cooking UI. Task 4 has not been started.
+[Task 4](TASK4.md) is complete: the responsive web interface exposes the existing
+cooking agent. Task 5 has not been started.
 
 ## Completed
+
+- Added a subordinate Start over control beneath cooking recipe metadata, using
+  the existing server reset action and clearing both input fields. Verified the
+  fresh ingredient screen, eight HTTP tests, typecheck and production build.
+- Addressed Task 4 manual-testing findings: retained the desktop ingredient sidebar,
+  made its full list primary (expanded by default on desktop), and reduced servings
+  to secondary metadata. Mobile retains an ingredient disclosure. Removed forced
+  cooking-area height and placed adaptive feedback immediately after the current
+  step quantities, independently of sidebar expansion or viewport height.
+- Corrected same-ingredient quantity changes in the domain: update the canonical
+  ingredient in place and preserve its ID, including normalization of a legacy
+  model response that invents a replacement ID. Remaining references use the
+  canonical ID. Quantity corrections do not create substitution records or a
+  duplicate recipe ingredient. Prior amounts and the completed-step prefix are
+  retained separately in `CookingSession.quantityChanges` and sent to the agent
+  for subsequent reasoning. Completed instructions remain unchanged.
+- Kept the existing adaptive action schema. The agent now instructs quantity
+  corrections to reuse the original ID/name/unit and specify the new total,
+  account for previous preparation/use, and revise all affected remaining steps.
+  Partial/invalid corrections roll back amount, instructions and history together.
+  Same-named duplicates disguised as additions are rejected. True substitutions
+  retain their existing behavior; used quantities still do not auto-scale.
+- Added a presentation-only ingredient formatter: “1 carrot” / “3 carrots”, natural
+  count-unit plurals, readable measured quantities and unspecified amounts. Canonical
+  quantities, names and units remain unchanged by display formatting. Added ten
+  regression tests across domain, HTTP/agent continuity and formatting.
+
+- Implemented the Task 4 ingredient → proposal → acceptance → cooking → adaptation
+  → completion web flow in the selected “Pass — Mise en place” direction, using
+  `DESIGN.md` and `docs/design/sous-reference.png` as the visual sources of truth.
+- Added one Node.js `/api/cooking` route with GET state retrieval and validated
+  POST commands for proposal, acceptance, current step, completion, adaptation,
+  and reset. All cooking operations delegate to `CookingAgent` and the domain
+  store. `LLMProvider` and provider adapters are unchanged; quantity-correction
+  semantics were subsequently extended in the follow-up recorded below.
+- Retained one agent (and its existing `CookingSessionStore`) per browser flow in
+  a process-global service. The agent retains pending proposals and clarification
+  context across requests. An HTTP-only, SameSite cookie identifies the flow;
+  production uses a Secure cookie. Reset releases that flow and its store.
+- Kept provider selection and credentials behind a `server-only` composition root,
+  using existing `LLM_PROVIDER`, `LLM_MODEL`, `GEMMA_MODEL`, and `GEMINI_API_KEY`
+  configuration. No provider/model is selected by browser code, no credentials
+  were inspected or changed, and no inference optimization was introduced.
+- Built a flat cream cooking surface with charcoal controls, orange accents,
+  strong rules, numbered progress, prominent instructions and real quantities.
+  Long instructions are split at sentence/clause boundaries for typography only;
+  every instruction word is retained. Current-step queries never advance.
+- Designed mobile cooking separately: vertical instruction/quantity hierarchy,
+  no desktop work rail, and fixed, 64 px tall completion/current-step controls.
+  Text questions use the dark action strip. The latest adaptive response is
+  secondary to the current state and distinguishes changes, advice and questions.
+- Added understandable errors, manual retries, missing-session recovery, disabled
+  controls during requests, expected-step checks, and per-flow concurrency guards.
+  API responses are uncached, snapshots are detached, and diagnostics are not
+  returned. Invalid operations preserve confirmed cooking state.
+- Added seven web/HTTP tests covering the complete flow, inference/malformed-output
+  failures and retries, invalid/stale operations, session isolation/loss,
+  clarification continuity, concurrency, origin checks, private cookies, and the
+  client import boundary. Existing application/domain tests remain intact.
 
 - Bootstrapped a minimal Next.js/TypeScript project with a placeholder page.
 - Defined `Ingredient`, `Recipe`, `RecipeStep`, `CookingSession`, `Substitution`,
@@ -58,9 +118,10 @@ The next milestone is web cooking UI. Task 4 has not been started.
   preserving unspecified amounts and model-selected exceptions. Already-used
   ingredients retain their recorded values. Compensation uses distinct additional
   ingredients and revised current/future instructions chosen by Gemma.
-- Completed step instructions/references and ingredients referenced by completed
-  steps are immutable. Adaptations cannot insert, delete, reorder, or edit
-  completed steps. Existing substitution records are retained.
+- Completed step instructions/references are immutable. Used ingredients cannot
+  auto-scale or be silently overwritten; explicit quantity corrections preserve
+  their previous snapshot separately. Adaptations cannot insert, delete, reorder,
+  or edit completed steps. Existing substitution records are retained.
 - Cooking problems can return advice without any state changes or explicit
   current/future instruction adjustments. Clarification changes no session state;
   its context is retained in the agent for the next natural-language reply.
@@ -93,6 +154,90 @@ The next milestone is web cooking UI. Task 4 has not been started.
   preserved; their source hashes were checked before and after implementation.
 
 ## Validation
+
+Task 4 manual-testing follow-up (2026-10-04):
+
+- Investigated the visible Chicken and Vegetable Pasta session: the full list
+  contained “1 piece carrot” and “3 piece carrot” while the current step referenced
+  three carrots. The previous store path appended replacements and retained any
+  original referenced by a completed step. Reproduced this state shape in focused
+  fixtures, including completed preparation and a model-generated replacement ID.
+- `npm test`: all 155 tests passed (145 prior plus ten new regression tests).
+  Tests cover corrections before/after preparation, original/fresh IDs, repeated
+  corrections, snapshots, immutable completed instructions, stale/partial/invalid
+  corrections and atomic history rollback, duplicate additions, scaling guards,
+  canonical HTTP snapshots, next-request reasoning context and natural formatting.
+  Existing mocked CLI subprocess tests ran with approved execution outside the
+  sandbox restriction; no live requests or credential loading occur in tests.
+- `npm run typecheck`, `npm run build`, and `git diff --check` passed. Browser
+  bundle inspection found no credential/configuration identifiers or model IDs.
+- Live production browser verification used the existing configurable Flash-Lite
+  adapter through server environment overrides. After completed carrot preparation,
+  a request for three carrots produced one canonical “3 carrots” entry in both
+  the full ingredient list and relevant current-step quantities. Sous explicitly
+  directed preparation of the extra two carrots rather than claiming they were
+  already prepared. Reload retained the correction; deterministic completion
+  advanced to the revised carrot instruction in the first verification session.
+- Checked the final build at actual 1440 × 1000 desktop, 390 × 844 mobile, and
+  320 × 740 mobile viewports with no horizontal overflow. Desktop keeps the full
+  list at the right, with secondary servings metadata; mobile disclosure works.
+  Adaptive updates and a live clarification (“How many carrots would you like
+  to use in total?”) appeared 24 px after the quantities. Expanding/collapsing the
+  desktop list did not move that feedback gap. UP NEXT follows the feedback;
+  the cooking grid has no forced minimum height. No console errors/warnings
+  were observed on the final build. Compared palette, rules and hierarchy with
+  the original Pass reference; no new visual direction was introduced.
+- Evidence: [desktop carrot correction](design/task4-verification/carrot-correction-desktop.jpg),
+  [mobile carrot correction](design/task4-verification/carrot-correction-mobile.jpg),
+  [desktop clarification](design/task4-verification/clarification-desktop.jpg).
+- Quantity corrections retain the canonical name/unit. Ambiguous unit conversions
+  are rejected rather than appended as another ingredient. Formatting uses a
+  bounded English food-noun/unit vocabulary; unknown nouns retain a readable
+  count-unit fallback. Free-form model prose is displayed intact.
+- Provider interfaces/settings, inference optimization, voice, persistence,
+  authentication and Task 5 remain unchanged/out of scope.
+
+
+Task 4 web UI (2026-10-04):
+
+- `npm test`: all 145 tests passed (138 existing plus seven web/HTTP tests).
+  The existing mocked CLI subprocess checks required approved execution outside
+  the sandbox's `spawnSync` restriction. Tests never load credentials or make
+  live inference requests.
+- `npm run typecheck`, `npm run build`, and `git diff --check` passed. Production
+  build includes a static home page and dynamic Node.js cooking API. Inspection
+  of browser bundles found no credential/configuration identifiers or model IDs.
+- Manually verified the final production build in the in-app browser, with
+  Flash-Lite selected solely through server environment overrides. Ingredient
+  input → Tomato Parmesan Pasta proposal → acceptance → all seven cooking steps
+  → completed state → cook-again reset succeeded. All model calls remained
+  server-side, with the existing credential loader; Gemma remains supported and
+  remains the default when no provider override is configured.
+- At step four, “I don't have tomato paste after all” revised the instruction to
+  add garlic without paste, removed the unused paste from the active ingredients,
+  and left the first three completed steps intact. The concise “Plan updated”
+  response and revised instruction were visible. Reload restored that state.
+- On mobile, “How much garlic should I use in this step?” returned advice to use
+  two cloves without changing the current step. Show current step retained the
+  same step; Done advanced deterministically through the final serving step.
+- Server restarts during verification produced the missing-session error; Start
+  again recovered to ingredient entry. Boundary tests also verify malformed
+  outputs, provider failures, stale completion and invalid operations with
+  unchanged snapshots. Those failure cases were not forced through live inference.
+- Visually compared desktop (1440 × 1000) and mobile (390 × 844) against the primary
+  reference. Preserved palette, typography, flat rules, quantities, numbered rail
+  and dark action strip. Corrected overly long mobile headlines using intact
+  instruction clauses and kept cooking actions reachable in a fixed bottom dock.
+  Also checked cooking at 320 × 740 with no horizontal overflow. Mobile input,
+  adaptive response, completion and return to ingredients worked. No browser
+  console warnings/errors were observed on the final build.
+- Browser evidence: [desktop adaptation](design/task4-verification/desktop.jpg),
+  [mobile cooking](design/task4-verification/mobile.jpg), and
+  [mobile completion](design/task4-verification/completed-mobile.jpg). These are
+  verification snapshots, not replacement design references.
+- No voice, timer scheduling, persistence, authentication, deployment, model
+  optimization or Task 5 work was implemented.
+
 
 Newly available ingredient follow-up (2026-10-04):
 
@@ -292,9 +437,21 @@ The following checks passed after Step 2 implementation:
 
 ## Current limitations
 
-- Sessions exist only in memory within each store instance and are lost when
-  the instance or process is discarded.
-- The placeholder web page is not connected to the session store.
+- Web sessions exist only in the server process. Reloads retain a flow while its
+  process survives; restarts discard it. Separate workers/instances do not share
+  sessions. Flows remain in memory until reset or process exit; there is no
+  expiration scheduler or durable recipe history.
+- One browser cookie identifies one flow, including across tabs. Concurrent
+  operations are rejected; an out-of-date completion returns the latest state.
+- The UI shows the latest adaptive response, not a conversation transcript. No
+  structured per-step duration, heat level or readiness cue exists in the current
+  recipe model, so separate heat/timer/readiness controls from the reference are
+  omitted. Timing or heat written inside an instruction remains visible as prose.
+- Very long instructions require scrolling on a phone; completion/current-step
+  actions remain reachable in the bottom dock. Browser viewport emulation was
+  tested, not physical devices, native keyboards or assistive technologies.
+- Production cookies require HTTPS outside trustworthy localhost contexts.
+  Deployment and multi-instance hosting are outside this milestone.
 - Timer scheduling is not implemented.
 - Gemma JSON generation is prompted, not guaranteed by server-side constrained
   decoding. Runtime validation rejects malformed/incompatible responses;
@@ -307,8 +464,10 @@ The following checks passed after Step 2 implementation:
   with the credentials available during this validation; that earlier billing
   failure was not reproduced.
 - Ingredient use is conservatively inferred from completed step references.
-  Partial use within a step is not measured. Already-used quantities are locked;
-  model-directed compensation requires separate ingredients in remaining steps.
+  Partial use within a step is not measured. Already-used quantities remain locked
+  for automatic serving scaling. Explicit same-ingredient quantity corrections
+  update the active total with prior snapshots recorded separately; model-directed
+  compensation uses distinct additional lots and remaining instructions.
 - Culinary appropriateness, whether quoted user evidence implies a whole step
   was completed, and consistency of prose quantities with the structured plan
   depend on model reasoning. Runtime checks enforce valid shapes/references,
@@ -323,10 +482,9 @@ The following checks passed after Step 2 implementation:
 
 - Timer scheduling and unrestricted model-directed state replacement.
 - Voice, speech-to-text/text-to-speech, push-to-talk, hands-free use and wake words.
-- Web UI integration, database, authentication and deployment.
-- Task 4 / web cooking UI implementation.
+- Database, authentication and deployment.
+- Task 5 / voice implementation.
 
-## Next milestone: web cooking UI
+## Next milestone: voice
 
-Connect the existing cooking agent to a web cooking interface in the next
-milestone. This milestone has not been started; no Task 4 work was implemented.
+Task 4 is complete. Task 5 remains unstarted; no voice behavior has been added.

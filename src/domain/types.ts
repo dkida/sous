@@ -29,6 +29,14 @@ export interface Substitution {
   reason?: string;
 }
 
+export interface IngredientQuantityChange {
+  /** Snapshot of the canonical ingredient before an explicit quantity correction. */
+  previousIngredient: Ingredient;
+  quantity: number | null;
+  /** Cooking history at the time of the change; completed steps are not rewritten. */
+  completedStepIds: string[];
+}
+
 export interface CookingTimer {
   id: string;
   label: string;
@@ -41,12 +49,13 @@ export interface CookingTimer {
 
 export interface CookingSession {
   id: string;
-  /** Active plan. Completed instructions and ingredients already used are retained. */
+  /** Active plan. Completed instructions are retained; explicit quantity changes keep prior amounts in quantityChanges. */
   recipe: Recipe;
   status: "ready" | "cooking" | "completed";
   /** Null before starting and after completing the recipe. */
   currentStepId: string | null;
   completedStepIds: string[];
   substitutions: Substitution[];
+  quantityChanges: IngredientQuantityChange[];
   timers: CookingTimer[];
 }

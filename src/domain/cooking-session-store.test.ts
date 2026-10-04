@@ -34,6 +34,7 @@ describe("CookingSessionStore", () => {
       currentStepId: null,
       completedStepIds: [],
       substitutions: [],
+      quantityChanges: [],
       timers: [],
     });
     assert.deepEqual(store.getSession("dinner"), session);

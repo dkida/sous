@@ -153,7 +153,7 @@ Context: ${JSON.stringify({ ...this.pending, currentSession: this.store.getSessi
     }
     if (!userMessage.trim()) throw new CookingAgentError("Please describe the cooking change or problem.");
     const expectedStepId = before.currentStep.id;
-    const { recipe, completedStepIds, substitutions } = before.session;
+    const { recipe, completedStepIds, substitutions, quantityChanges } = before.session;
     const completedSteps = recipe.steps.filter((step) => completedStepIds.includes(step.id));
     const usedIngredientIds = [...new Set(completedSteps.flatMap((step) => step.ingredientIds))];
     this.generating = true;
@@ -170,13 +170,15 @@ Return ONLY one JSON action with exactly one of these shapes (all displayed fiel
 stepUpdates contains complete step objects {"id":"existing-step-id","instruction":"Revised instruction.","ingredientIds":["known-ingredient-id"]}.
 additionalIngredients contains new ingredient objects {"id":"new-id","name":"Ingredient","quantity":100,"unit":"g"}; reference each in a remaining step.
 Ingredient quantities must be positive finite numbers or null (to taste), units non-empty strings or null; IDs must be unique.
-Never replace a session or recipe. Never change recipe identity, step IDs/order, completed instructions, or ingredients already used.
-Ingredient changes: replacement may be null for omission. Give a new unique ID for a replacement; revise EVERY remaining step referencing the original to remove that reference and use the replacement where appropriate. Used originals remain historical.
-Use ingredient_change ONLY to omit or replace an existing ingredient; originalIngredientId must be its actual ID from context, never empty, null, or invented.
+Never replace a session or recipe. Never change recipe identity, step IDs/order, or completed instructions. Preserve recorded ingredient history; only an explicit requested quantity correction may update an existing ingredient total.
+Ingredient changes: replacement may be null for omission. Give a new unique ID when substituting a DIFFERENT ingredient; for substitutions/omissions, revise EVERY remaining step referencing the original to remove that reference and use the replacement where appropriate. Used originals remain historical. Same-ingredient quantity corrections instead retain the canonical ID as described below.
+Changing the quantity of the SAME ingredient (for example, use 3 carrots instead of 1): use ingredient_change with originalIngredientId and replacement.id BOTH set to the existing canonical ID, preserving its exact name and unit and setting the requested TOTAL quantity. Revise every current/future step referencing it, retaining the same ID. Do not append an additional ingredient, invent a substitution, or interpret a total of 3 as 3 extra. The application records the prior amount separately in quantityChanges.
+If completed steps already reference the ingredient, do not claim the increased amount was already prepared or added. Use quantityChanges and completed instructions to preserve what actually happened; include necessary extra preparation in a remaining step, or clarify if the physical quantity/use is uncertain. A correction updates the active recipe total, not completed cooking history.
+Use ingredient_change ONLY to omit, substitute, or explicitly correct the quantity of an existing ingredient; originalIngredientId must be its actual ID from context, never empty, null, or invented.
 Adding an extra ingredient without replacing anything: use cooking_problem with additionalIngredients and stepUpdates for preparation/use in current or future steps, retaining the existing ingredients and their references. This action also represents remaining-plan adjustments, not only urgent problems. Never invent an additional_ingredient action.
 If the user only mentions availability and it is unclear whether they want to include the ingredient, use clarification to ask. Do not substitute an unrelated ingredient just to fit ingredient_change.
 Scale servings: the application multiplies quantities of UNUSED ingredients by new/old servings. Null quantities stay null. Put only ingredients that should not scale in unscaledIngredientIds.
-Already-used ingredients remain exactly as recorded. If compensation is feasible, describe it with additionalIngredients at explicit quantities and revised remaining instructions. Never claim more was previously added. If infeasible or uncertain, clarify.
+When scaling servings, already-used ingredients remain exactly as recorded. If compensation is feasible, describe it with additionalIngredients at explicit quantities and revised remaining instructions. Never claim more was previously added. If infeasible or uncertain, clarify.
 Revise embedded quantities in remaining instructions when scaling. An ingredient referenced in ANY completed step is conservatively treated as already used.
 Cooking problems: return empty arrays for advice without state changes, or explicitly update current/future instructions. For urgent problems, lead message with a short immediate action.
 Reconcile only a contiguous prefix of remaining steps starting at the current step. Require clear evidence in the latest userMessage that EACH entire step happened. Do not infer unrelated work, skip steps, or mark a partially performed step complete. Ask for clarification when ambiguous.
@@ -184,7 +186,7 @@ Clarification never changes cooking state. Use previousClarification to interpre
 Context: ${JSON.stringify({ userMessage, previousClarification: this.clarification,
         recipe, servings: recipe.servings, ingredients: recipe.ingredients, completedSteps,
         currentStep: before.currentStep, remainingSteps: recipe.steps.slice(completedStepIds.length + 1),
-        usedIngredientIds, substitutions })}`;
+        usedIngredientIds, substitutions, quantityChanges })}`;
       const text = await timing.request(() => this.provider.generate(prompt));
       const action = timing.measure("validationMs", () => validateAdaptiveAction(parseModelJson(text)));
       const result = timing.measure("operationMs", (): AdaptiveCookingResult => {

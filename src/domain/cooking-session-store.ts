@@ -1,4 +1,4 @@
-import type { CookingSession, Recipe } from "./types";
+import type { CookingSession, Ingredient, Recipe } from "./types";
 import { validateRecipe } from "./recipe-validation";
 import { InvalidAdaptiveActionError, validateAdaptiveAction, type AdaptiveAction, type RemainingPlanChanges } from "./adaptive-action";
 
@@ -22,6 +22,7 @@ export class CookingSessionStore {
       currentStepId: null,
       completedStepIds: [],
       substitutions: [],
+      quantityChanges: [],
       timers: [],
     };
     this.sessions.set(id, session);
@@ -70,6 +71,10 @@ export class CookingSessionStore {
       const original = session.recipe.ingredients.find((ingredient) => ingredient.id === action.originalIngredientId);
       if (!original || !session.recipe.steps.slice(session.completedStepIds.length)
         .some((step) => step.ingredientIds.includes(original.id))) this.invalidAdaptation();
+      if (action.replacement && this.sameIngredient(original, action.replacement)) {
+        this.updateIngredientQuantity(session, original, action);
+        return;
+      }
       if (action.replacement) {
         if (session.recipe.ingredients.some((ingredient) => ingredient.id === action.replacement!.id)) this.invalidAdaptation();
         session.recipe.ingredients.push(structuredClone(action.replacement));
@@ -140,16 +145,26 @@ export class CookingSessionStore {
           JSON.stringify(before.recipe.steps.find((step) => step.id === stepId))) this.invalidAdaptation();
     }
     for (const ingredientId of this.usedIngredientIds(before)) {
-      if (JSON.stringify(session.recipe.ingredients.find((ingredient) => ingredient.id === ingredientId)) !==
-          JSON.stringify(before.recipe.ingredients.find((ingredient) => ingredient.id === ingredientId))) this.invalidAdaptation();
+      const original = before.recipe.ingredients.find((ingredient) => ingredient.id === ingredientId)!;
+      const after = session.recipe.ingredients.find((ingredient) => ingredient.id === ingredientId);
+      // Only an explicit, recorded quantity correction may change a used ingredient.
+      const correction = session.quantityChanges.slice(before.quantityChanges.length)
+        .find((change) => change.previousIngredient.id === ingredientId);
+      const expected = correction ? { ...original, quantity: correction.quantity } : original;
+      if (JSON.stringify(after) !== JSON.stringify(expected) || (correction &&
+          (JSON.stringify(correction.previousIngredient) !== JSON.stringify(original) ||
+           JSON.stringify(correction.completedStepIds) !== JSON.stringify(before.completedStepIds)))) this.invalidAdaptation();
     }
+    if (JSON.stringify(session.quantityChanges.slice(0, before.quantityChanges.length)) !== JSON.stringify(before.quantityChanges)) this.invalidAdaptation();
     this.sessions.set(id, session);
     return structuredClone(session);
   }
 
   private updateRemainingPlan(session: CookingSession, changes: RemainingPlanChanges): void {
     for (const ingredient of changes.additionalIngredients) {
-      if (session.recipe.ingredients.some((existing) => existing.id === ingredient.id)) this.invalidAdaptation();
+      // A quantity correction is not a new ingredient lot. Require ingredient_change
+      // rather than accepting the same canonical ingredient under an invented ID.
+      if (session.recipe.ingredients.some((existing) => existing.id === ingredient.id || this.sameIngredient(existing, ingredient))) this.invalidAdaptation();
       session.recipe.ingredients.push(structuredClone(ingredient));
     }
     for (const step of changes.stepUpdates) {
@@ -162,6 +177,38 @@ export class CookingSessionStore {
         this.invalidAdaptation();
       }
     }
+  }
+
+  private updateIngredientQuantity(session: CookingSession, original: Ingredient,
+    action: Extract<AdaptiveAction, { type: "ingredient_change" }>): void {
+    const replacement = action.replacement!;
+    if (!this.sameUnit(original.unit, replacement.unit) || replacement.quantity === original.quantity ||
+        (replacement.id !== original.id && session.recipe.ingredients.some((ingredient) => ingredient.id === replacement.id))) this.invalidAdaptation();
+    const affectedSteps = session.recipe.steps.slice(session.completedStepIds.length)
+      .filter((step) => step.ingredientIds.includes(original.id));
+    if (affectedSteps.some((step) => !action.stepUpdates.some((update) => update.id === step.id))) this.invalidAdaptation();
+    session.quantityChanges.push({ previousIngredient: structuredClone(original), quantity: replacement.quantity,
+      completedStepIds: [...session.completedStepIds] });
+    original.quantity = replacement.quantity;
+    // Accept legacy model responses with a fresh ID, but canonicalize all future
+    // references to the existing ID instead of adding a second recipe ingredient.
+    this.updateRemainingPlan(session, { ...action, stepUpdates: action.stepUpdates.map((step) => ({ ...step,
+      ingredientIds: step.ingredientIds.map((id) => id === replacement.id ? original.id : id),
+    })) });
+    if (affectedSteps.some((step) => !session.recipe.steps.find((updated) => updated.id === step.id)?.ingredientIds.includes(original.id))) this.invalidAdaptation();
+  }
+
+  private sameIngredient(left: Ingredient, right: Ingredient): boolean {
+    const normalize = (value: string | null) => value?.trim().replace(/\s+/g, " ").toLowerCase() ?? null;
+    return normalize(left.name) === normalize(right.name);
+  }
+
+  private sameUnit(left: string | null, right: string | null): boolean {
+    const unit = (value: string | null) => {
+      const normalized = value?.trim().toLowerCase() ?? null;
+      return normalized && /^(pieces?|units?|items?|whole)$/.test(normalized) ? "count" : normalized;
+    };
+    return unit(left) === unit(right);
   }
 
   private usedIngredientIds(session: CookingSession): Set<string> {

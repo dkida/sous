@@ -10,7 +10,7 @@
     "bench:inference": "node --env-file=.env.local --import tsx src/benchmark/run.ts",
     "build": "next build",
     "start": "next start",
-    "test": "node --import tsx --test --experimental-test-isolation=none src/domain/*.test.ts src/application/*.test.ts src/infrastructure/*.test.ts src/benchmark/*.test.ts",
+    "test": "node --import tsx --test --experimental-test-isolation=none src/domain/*.test.ts src/application/*.test.ts src/infrastructure/*.test.ts src/benchmark/*.test.ts src/web/*.test.ts",
     "typecheck": "next typegen && tsc --noEmit"
   },
   "engines": {
