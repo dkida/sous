@@ -9,6 +9,8 @@ export interface Ingredient {
 
 export interface RecipeStep {
   id: string;
+  /** Short imperative action for the visual heading; full detail stays in instruction. */
+  headline: string;
   instruction: string;
   ingredientIds: string[];
 }

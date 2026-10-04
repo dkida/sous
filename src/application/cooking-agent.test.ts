@@ -18,8 +18,8 @@ function makeRecipe(): Recipe {
       { id: "salt", name: "Salt", quantity: null, unit: null },
     ],
     steps: [
-      { id: "boil", instruction: "Boil pasta in salted water.", ingredientIds: ["pasta", "salt"] },
-      { id: "sauce", instruction: "Heat tomatoes and combine with pasta.", ingredientIds: ["tomatoes", "pasta"] },
+      { id: "boil", headline: "Boil pasta in salted water", instruction: "Boil pasta in salted water.", ingredientIds: ["pasta", "salt"] },
+      { id: "sauce", headline: "Heat the tomatoes", instruction: "Heat tomatoes and combine with pasta.", ingredientIds: ["tomatoes", "pasta"] },
     ],
   };
 }

@@ -23,8 +23,12 @@ const failure = (status: number, code: NonNullable<CookingReply["error"]>["code"
 
 /** Transport orchestration only; the existing agent/store own all cooking behavior. */
 export class WebCookingService {
-  private readonly flows = new Map<string, Flow>();
-  constructor(private readonly createProvider: () => LLMProvider) {}
+  private readonly flows: Map<string, Flow>;
+  constructor(private readonly createProvider: () => LLMProvider, retained?: WebCookingService) {
+    // Retain data across development reloads, while using the current transport
+    // handlers and spoken-step formatter rather than a cached class instance.
+    this.flows = retained?.flows ?? new Map<string, Flow>();
+  }
 
   read(id?: string): ServiceReply {
     if (!id) return { status: 200, body: { state: emptyState() } };
@@ -69,6 +73,7 @@ export class WebCookingService {
       active.requests.add(requestId);
       if (active.requests.size > 100) active.requests.delete(active.requests.values().next().value!);
     }
+    const previousStepId = active.state.progress?.currentStep?.id;
     try {
       switch (command.action) {
         case "propose":
@@ -102,7 +107,7 @@ export class WebCookingService {
         }
       }
       if (command.action !== "current") active.revision = crypto.randomUUID();
-      active.speech = { id: crypto.randomUUID(), text: spokenResponse(command, active.state, active.language) };
+      active.speech = { id: crypto.randomUUID(), text: spokenResponse(command, active.state, active.language, previousStepId) };
       const result = this.snapshot(id!, active);
       if (requestId && active.speech.text) result.body.speech = structuredClone(active.speech);
       return result;

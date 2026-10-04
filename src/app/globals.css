@@ -60,6 +60,7 @@ textarea::placeholder { color: #797e6d; }
 .rail-marks i.passed { background: var(--accent); }
 .step-content, .current-action { min-width: 0; }
 .current-action h1 { margin: 32px 0 28px; font-size: clamp(44px, 4.5vw, 74px); }
+.current-action h1.long-instruction { font-size: clamp(36px, 3.6vw, 60px); }
 .current-action h1:focus { outline: none; }
 .current-action h1:focus-visible { outline: 3px solid var(--accent); }
 .instruction-detail { font-size: 19px; line-height: 1.65; color: var(--muted); }
@@ -132,8 +133,8 @@ summary { cursor: pointer; min-height: 44px; padding: 10px 0; }
   .proposal-facts strong { font-size: 44px; }
   .cooking-work { display: block; padding: 28px 22px 24px; min-height: 0; }
   .work-rail { display: none; }
-  .current-action h1 { font-size: 44px; margin: 26px 0 24px; line-height: 1.02; letter-spacing: -2.5px; }
-  .current-action h1.long-instruction { font-size: 36px; }
+  .current-action h1 { font-size: clamp(36px, 11vw, 44px); margin: 26px 0 24px; line-height: 1.02; letter-spacing: -2.5px; }
+  .current-action h1.long-instruction { font-size: clamp(30px, 9vw, 36px); }
   .instruction-detail { font-size: 17px; line-height: 1.55; }
   .quantities { margin-top: 28px; }
   .quantities ul { display: block; }
@@ -144,8 +145,7 @@ summary { cursor: pointer; min-height: 44px; padding: 10px 0; }
   .adaptation > p:last-child { font-size: 17px; }
   .up-next { margin-top: 30px; gap: 14px; }
   .action-strip { padding: 22px; flex-direction: column; align-items: stretch; gap: 18px; }
-  .cooking { padding-bottom: 96px; }
-  .deterministic { display: block; position: fixed; bottom: 0; left: 0; right: 0; z-index: 5; background: var(--ink); border-top: 1px solid var(--dark-rule); padding: 14px 22px max(14px, env(safe-area-inset-bottom)); }
+  .deterministic { display: block; }
   .deterministic > .eyebrow { display: none; }
   .deterministic > .primary { width: 100%; min-height: 56px; }
   .proposal-buttons { display: grid; grid-template-columns: 1fr 1.4fr; gap: 10px; }
@@ -180,12 +180,20 @@ summary { cursor: pointer; min-height: 44px; padding: 10px 0; }
 .composer-send:disabled { background: transparent; border-color: var(--dark-rule); color: #a9ad9d; }
 .composer-cancel { min-height: 56px; padding: 12px; border: 0; background: transparent; color: var(--cream); text-decoration: underline; text-underline-offset: 4px; }
 .composer-error { flex: 1; color: #f1a88f; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+.ingredient-composer { margin-top: 36px; background: var(--ink); color: var(--cream); padding: 16px; }
+.ingredient-composer .eyebrow { color: #c6c9b6; }
+.ingredient-composer form { margin-top: 0; }
+.ingredient-composer label { margin-bottom: 0; }
+.ingredient-composer .composer-tools { flex-wrap: wrap; }
+.ingredient-send { margin-left: auto; }
 @media (max-width: 600px) {
   .composer { padding: 12px; }
   .composer.is-listening { padding-left: 10px; }
   .composer-input { font-size: 16px; }
   .composer-tools { gap: 8px; }
   .composer-error { font-size: 13px; }
+  .ingredient-composer { padding: 12px; margin-top: 28px; }
+  .ingredient-send { flex-basis: 100%; }
 }
 
 /* Language stays a small part of the masthead, with the same ruled Pass styling. */
@@ -196,3 +204,77 @@ summary { cursor: pointer; min-height: 44px; padding: 10px 0; }
 @media (max-width: 700px) { .language-switch { padding-left: 4px; margin-left: auto; } }
 
 @media (max-width: 360px) { .phases li { flex-direction: column; align-items: flex-start; gap: 4px; } }
+
+/* Active phone cooking: one shared interaction area; desktop stays in flow. */
+@media (max-width: 600px) {
+  .kitchen.cooking {
+    --interaction-height: 132px;
+    --keyboard-inset: 0px;
+    min-height: 100dvh;
+    padding-bottom: calc(var(--interaction-height) + var(--keyboard-inset) + 16px);
+  }
+  .cooking .page-foot { display: none; }
+  .cooking .edition { padding: 10px 22px; }
+  .cooking .surface { min-height: 0; }
+  .cooking .masthead { padding: 10px 0; min-height: 0; row-gap: 6px; }
+  .cooking .cooking-work { padding-top: 20px; padding-bottom: 16px; }
+  .cooking .current-action h1 { margin: 16px 0; }
+  .cooking .quantities { margin-top: 20px; padding-top: 12px; }
+  .cooking .quantities ul { padding-top: 8px; }
+  .cooking .quantities li { font-size: 22px; margin-bottom: 6px; }
+  .cooking .adaptation { margin-top: 16px; padding: 6px 12px; }
+  .cooking .adaptation > p:last-child { margin-top: 4px; font-size: 16px; line-height: 1.45; }
+  .cooking .up-next { margin-top: 20px; padding-top: 12px; }
+  .cooking .cooking-meta { margin-top: 20px; padding-top: 12px; }
+  .cooking .action-strip {
+    position: fixed;
+    bottom: var(--keyboard-inset);
+    left: 0;
+    right: 0;
+    z-index: 5;
+    border-top: 1px solid var(--dark-rule);
+    padding: 10px 16px max(10px, env(safe-area-inset-bottom));
+    gap: 8px;
+  }
+  .cooking .deterministic > .primary { min-height: 48px; padding: 10px 16px; font-size: 17px; }
+  .cooking .composer {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto 48px;
+    grid-template-areas: "status status status" "input mic send" "cancel cancel cancel" "error error error";
+    column-gap: 8px;
+    padding: 0 8px;
+  }
+  .cooking .composer-heading { grid-area: status; }
+  .cooking .composer:not(.has-status) .composer-heading {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .cooking .composer.has-status .composer-heading { padding: 6px 0; }
+  .cooking .composer-input {
+    grid-area: input;
+    height: 48px;
+    min-height: 48px;
+    max-height: min(112px, 25dvh);
+    padding: 12px 0;
+    resize: none;
+    overflow-y: auto;
+    scroll-margin-block: 16px;
+  }
+  .cooking .composer-input:focus:not([readonly]) { height: 88px; }
+  .cooking .composer-input:not(:focus) { white-space: pre; overflow: hidden; }
+  .cooking .composer-tools { display: contents; }
+  .cooking .composer-mic, .cooking .composer-send {
+    min-width: 48px;
+    min-height: 48px;
+    height: 48px;
+    padding: 10px;
+    align-self: center;
+  }
+  .cooking .composer-mic { grid-area: mic; }
+  .cooking .composer-send { grid-area: send; margin: 0; }
+  .cooking .composer-cancel { grid-area: cancel; min-height: 48px; justify-self: start; }
+  .cooking .composer-error { grid-area: error; padding: 8px 0; }
+}

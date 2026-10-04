@@ -7,7 +7,7 @@ describe("fixed inference benchmark scenarios", () => {
   const outputs = {
     proposal: acceptedProposal, recipe: fixtureRecipe(),
     "missing-paste": { type: "ingredient_change", message: "Cook the tomatoes down longer without paste.", originalIngredientId: "paste", replacement: null,
-      reason: "Concentrate the tomatoes instead.", stepUpdates: [{ id: "sauce", instruction: "Add tomatoes and simmer longer.", ingredientIds: ["tomatoes"] }], additionalIngredients: [] },
+      reason: "Concentrate the tomatoes instead.", stepUpdates: [{ id: "sauce", headline: "Add tomatoes and simmer longer", instruction: "Add tomatoes and simmer longer.", ingredientIds: ["tomatoes"] }], additionalIngredients: [] },
     "scale-2-to-4": { type: "scale_servings", message: "Scale the unused ingredients; cook extra pasta separately.", servings: 4,
       unscaledIngredientIds: [], stepUpdates: [], additionalIngredients: [] },
     "burning-onions": { type: "cooking_problem", message: "Remove the pan from heat now.", stepUpdates: [], additionalIngredients: [] },

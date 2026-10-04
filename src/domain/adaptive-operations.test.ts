@@ -7,8 +7,8 @@ function setup() {
   const store = new CookingSessionStore();
   store.createSession("dinner", { id: "rice", title: "Rice", servings: 2,
     ingredients: [{ id: "rice", name: "Rice", quantity: 200, unit: "g" }],
-    steps: [{ id: "cook", instruction: "Cook rice.", ingredientIds: ["rice"] },
-      { id: "serve", instruction: "Serve rice.", ingredientIds: ["rice"] }] });
+    steps: [{ id: "cook", headline: "Cook rice", instruction: "Cook rice.", ingredientIds: ["rice"] },
+      { id: "serve", headline: "Serve rice", instruction: "Serve rice.", ingredientIds: ["rice"] }] });
   return store;
 }
 const advice: Extract<AdaptiveAction, { type: "cooking_problem" }> = {
@@ -47,7 +47,7 @@ describe("adaptive store boundaries", () => {
     store.startSession("dinner");
     const before = store.completeCurrentStep("dinner", "cook");
     assert.throws(() => store.adjustCookingInstructions("dinner", "serve", { ...advice,
-      stepUpdates: [{ id: "cook", instruction: "Cook twice as much rice.", ingredientIds: [] }] }));
+      stepUpdates: [{ id: "cook", headline: "Cook twice as much rice", instruction: "Cook twice as much rice.", ingredientIds: [] }] }));
     assert.deepEqual(store.getSession("dinner"), before);
   });
 
@@ -56,7 +56,7 @@ describe("adaptive store boundaries", () => {
     store.startSession("dinner");
     const before = store.completeCurrentStep("dinner", "cook");
     const after = store.scaleServings("dinner", "serve", { type: "scale_servings", message: "Split the cooked rice into four portions.",
-      servings: 4, unscaledIngredientIds: [], stepUpdates: [{ id: "serve", instruction: "Split into four smaller portions.", ingredientIds: ["rice"] }], additionalIngredients: [] });
+      servings: 4, unscaledIngredientIds: [], stepUpdates: [{ id: "serve", headline: "Split into four smaller portions", instruction: "Split into four smaller portions.", ingredientIds: ["rice"] }], additionalIngredients: [] });
     assert.equal(after.recipe.servings, 4);
     assert.deepEqual(after.recipe.ingredients, before.recipe.ingredients);
     assert.deepEqual(after.recipe.steps[0], before.recipe.steps[0]);
@@ -66,7 +66,7 @@ describe("adaptive store boundaries", () => {
     const store = new CookingSessionStore();
     store.createSession("dinner", { id: "rice", title: "Rice", servings: 1,
       ingredients: [{ id: "rice", name: "Rice", quantity: Number.MAX_VALUE, unit: "g" }],
-      steps: [{ id: "cook", instruction: "Cook rice.", ingredientIds: ["rice"] }] });
+      steps: [{ id: "cook", headline: "Cook rice", instruction: "Cook rice.", ingredientIds: ["rice"] }] });
     const before = store.startSession("dinner");
     assert.throws(() => store.scaleServings("dinner", "cook", { type: "scale_servings", message: "Double.",
       servings: 2, unscaledIngredientIds: [], stepUpdates: [], additionalIngredients: [] }));
@@ -77,7 +77,7 @@ describe("adaptive store boundaries", () => {
     const store = setup();
     const other = store.createSession("lunch", store.getSession("dinner")!.recipe);
     store.startSession("dinner");
-    const action = { ...advice, stepUpdates: [{ id: "cook", instruction: "Cook rice gently.", ingredientIds: ["rice"] }] };
+    const action = { ...advice, stepUpdates: [{ id: "cook", headline: "Cook rice gently", instruction: "Cook rice gently.", ingredientIds: ["rice"] }] };
     const result = store.adjustCookingInstructions("dinner", "cook", action);
     const expected = structuredClone(result);
     action.stepUpdates[0]!.instruction = "Mutated input";

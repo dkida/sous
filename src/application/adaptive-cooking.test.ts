@@ -15,10 +15,10 @@ function recipe(): Recipe {
     { id: "cheese", name: "Parmesan", quantity: 40, unit: "g" },
     { id: "salt", name: "Salt", quantity: null, unit: null },
   ], steps: [
-    { id: "boil", instruction: "Boil 200 g pasta in salted water.", ingredientIds: ["pasta", "salt"] },
-    { id: "saute", instruction: "Sauté 2 cloves of garlic.", ingredientIds: ["garlic"] },
-    { id: "sauce", instruction: "Add chopped tomatoes and tomato paste to the pan and simmer until the sauce thickens.", ingredientIds: ["tomatoes", "paste"] },
-    { id: "serve", instruction: "Combine pasta and sauce and top with 40 g parmesan.", ingredientIds: ["pasta", "tomatoes", "cheese"] },
+    { id: "boil", headline: "Cook the pasta", instruction: "Boil 200 g pasta in salted water.", ingredientIds: ["pasta", "salt"] },
+    { id: "saute", headline: "Sauté 2 cloves of garlic", instruction: "Sauté 2 cloves of garlic.", ingredientIds: ["garlic"] },
+    { id: "sauce", headline: "Add chopped tomatoes", instruction: "Add chopped tomatoes and tomato paste to the pan and simmer until the sauce thickens.", ingredientIds: ["tomatoes", "paste"] },
+    { id: "serve", headline: "Combine pasta and sauce", instruction: "Combine pasta and sauce and top with 40 g parmesan.", ingredientIds: ["pasta", "tomatoes", "cheese"] },
   ] };
 }
 
@@ -50,16 +50,16 @@ const advice: AdaptiveAction = { type: "cooking_problem", message: "Take the pan
 function omission(): AdaptiveAction {
   return { type: "ingredient_change", message: "Skip the paste and cook the tomatoes down for longer.",
     originalIngredientId: "paste", replacement: null, reason: "Tomatoes can reduce to thicken the sauce.",
-    stepUpdates: [{ id: "sauce", instruction: "Add chopped tomatoes and simmer longer until thickened.", ingredientIds: ["tomatoes"] }],
+    stepUpdates: [{ id: "sauce", headline: "Add chopped tomatoes", instruction: "Add chopped tomatoes and simmer longer until thickened.", ingredientIds: ["tomatoes"] }],
     additionalIngredients: [] };
 }
 
 function scaling(): AdaptiveAction {
   return { type: "scale_servings", message: "Use double the unused ingredients for four servings.", servings: 4,
     unscaledIngredientIds: [], additionalIngredients: [], stepUpdates: [
-      { ...recipe().steps[0]!, instruction: "Boil 400 g pasta in salted water." },
-      { ...recipe().steps[1]!, instruction: "Sauté 4 cloves of garlic." },
-      { ...recipe().steps[3]!, instruction: "Combine pasta and sauce and top with 80 g parmesan." },
+      { ...recipe().steps[0]!, headline: "Cook the pasta", instruction: "Boil 400 g pasta in salted water." },
+      { ...recipe().steps[1]!, headline: "Sauté 4 cloves of garlic", instruction: "Sauté 4 cloves of garlic." },
+      { ...recipe().steps[3]!, headline: "Combine pasta and sauce", instruction: "Combine pasta and sauce and top with 80 g parmesan." },
     ] };
 }
 
@@ -94,7 +94,7 @@ describe("adaptive CookingAgent", () => {
     const replacement = { id: "pecorino", name: "Pecorino", quantity: 25, unit: "g" };
     const change: AdaptiveAction = { type: "ingredient_change", message: "Use 25 g pecorino; it is saltier.",
       originalIngredientId: "cheese", replacement, reason: "Stronger, saltier cheese.", additionalIngredients: [],
-      stepUpdates: [{ id: "serve", instruction: "Combine pasta and sauce and top with 25 g pecorino.", ingredientIds: ["pasta", "tomatoes", "pecorino"] }] };
+      stepUpdates: [{ id: "serve", headline: "Combine pasta and sauce", instruction: "Combine pasta and sauce and top with 25 g pecorino.", ingredientIds: ["pasta", "tomatoes", "pecorino"] }] };
     const { agent, provider } = setup([change, advice], 2);
     const result = await agent.adaptCooking("I don't have parmesan but I have pecorino.");
     assert.deepEqual(result.session.substitutions[0]?.replacement, replacement);
@@ -108,7 +108,7 @@ describe("adaptive CookingAgent", () => {
     const replacement = { id: "rice", name: "Cooked rice", quantity: 200, unit: "g" };
     const { agent } = setup([{ type: "ingredient_change", message: "Use rice for the remaining combination.",
       originalIngredientId: "pasta", replacement, reason: "Use what is available.", additionalIngredients: [],
-      stepUpdates: [{ ...recipe().steps[3], instruction: "Combine rice and sauce; add parmesan.", ingredientIds: ["rice", "tomatoes", "cheese"] }] }], 2);
+      stepUpdates: [{ ...recipe().steps[3], headline: "Combine rice and sauce", instruction: "Combine rice and sauce; add parmesan.", ingredientIds: ["rice", "tomatoes", "cheese"] }] }], 2);
     const before = agent.getCurrentStep().session;
     const after = (await agent.adaptCooking("I cannot use the cooked pasta; I have cooked rice.")).session;
     assert.deepEqual(after.recipe.steps[0], before.recipe.steps[0]);
@@ -129,8 +129,8 @@ describe("adaptive CookingAgent", () => {
     const action = scaling();
     assert.equal(action.type, "scale_servings");
     action.stepUpdates = [
-      { id: "sauce", instruction: "Boil another 200 g pasta separately. Add 800 g tomatoes, 60 g paste and 2 extra cloves of garlic; simmer.", ingredientIds: ["extra-pasta", "extra-garlic", "tomatoes", "paste"] },
-      { ...recipe().steps[3]!, instruction: "Combine all pasta and sauce and top with 80 g parmesan.", ingredientIds: ["pasta", "extra-pasta", "tomatoes", "cheese"] },
+      { id: "sauce", headline: "Cook the extra pasta", instruction: "Boil another 200 g pasta separately. Add 800 g tomatoes, 60 g paste and 2 extra cloves of garlic; simmer.", ingredientIds: ["extra-pasta", "extra-garlic", "tomatoes", "paste"] },
+      { ...recipe().steps[3]!, headline: "Combine pasta and sauce", instruction: "Combine all pasta and sauce and top with 80 g parmesan.", ingredientIds: ["pasta", "extra-pasta", "tomatoes", "cheese"] },
     ];
     action.additionalIngredients = [
       { id: "extra-pasta", name: "Additional pasta", quantity: 200, unit: "g" },
@@ -166,7 +166,7 @@ describe("adaptive CookingAgent", () => {
   it("adapts current/future problem instructions with an explicit added ingredient", async () => {
     const { agent } = setup([{ type: "cooking_problem", message: "Stir in a little water now.",
       additionalIngredients: [{ id: "water", name: "Water", quantity: 30, unit: "ml" }],
-      stepUpdates: [{ id: "sauce", instruction: "Stir in 30 ml water, then simmer gently.", ingredientIds: ["tomatoes", "paste", "water"] }] }], 2);
+      stepUpdates: [{ id: "sauce", headline: "Stir in water", instruction: "Stir in 30 ml water, then simmer gently.", ingredientIds: ["tomatoes", "paste", "water"] }] }], 2);
     const before = agent.getCurrentStep().session;
     const after = (await agent.adaptCooking("The sauce is too thick.")).session;
     assert.deepEqual(after.recipe.steps.slice(0, 2), before.recipe.steps.slice(0, 2));
@@ -178,7 +178,7 @@ describe("adaptive CookingAgent", () => {
     const garlic = { id: "extra-garlic", name: "Additional garlic", quantity: 1, unit: "clove" };
     const action: AdaptiveAction = { type: "cooking_problem", message: "Mince one extra clove and cook it with the tomatoes.",
       additionalIngredients: [garlic], stepUpdates: [{ id: "sauce",
-        instruction: "Mince one extra clove of garlic. Add it with the tomatoes and tomato paste; simmer.",
+        headline: "Mince the extra garlic", instruction: "Mince one extra clove of garlic. Add it with the tomatoes and tomato paste; simmer.",
         ingredientIds: ["tomatoes", "paste", "extra-garlic"] }] };
     const { agent } = setup([action], 2);
     const before = agent.getCurrentStep().session;
@@ -196,7 +196,7 @@ describe("adaptive CookingAgent", () => {
     const question: AdaptiveAction = { type: "clarification", message: "Would you like to add extra garlic?" };
     const addition: AdaptiveAction = { type: "cooking_problem", message: "Mince another clove and add it to the sauce.",
       additionalIngredients: [{ id: "extra-garlic", name: "Additional garlic", quantity: 1, unit: "clove" }],
-      stepUpdates: [{ id: "sauce", instruction: "Mince another clove; add it with tomatoes and paste and simmer.",
+      stepUpdates: [{ id: "sauce", headline: "Mince another clove", instruction: "Mince another clove; add it with tomatoes and paste and simmer.",
         ingredientIds: ["tomatoes", "paste", "extra-garlic"] }] };
     const { agent, provider } = setup([question, addition], 2);
     const before = agent.getCurrentStep().session;
@@ -261,10 +261,10 @@ describe("adaptive CookingAgent", () => {
     ["replacement ID collision", { ...omission(), replacement: recipe().ingredients[2] }],
     ["negative replacement", { ...omission(), replacement: { id: "new", name: "New", quantity: -1, unit: "g" } }],
     ["duplicate additional ingredients", { ...advice, additionalIngredients: [recipe().ingredients[0], recipe().ingredients[0]] }],
-    ["unknown step", { ...advice, stepUpdates: [{ id: "invented", instruction: "Skip", ingredientIds: [] }] }],
+    ["unknown step", { ...advice, stepUpdates: [{ id: "invented", headline: "Skip", instruction: "Skip", ingredientIds: [] }] }],
     ["duplicate step updates", { ...advice, stepUpdates: [recipe().steps[2], recipe().steps[2]] }],
-    ["unknown ingredient reference", { ...advice, stepUpdates: [{ id: "sauce", instruction: "Cook", ingredientIds: ["invented"] }] }],
-    ["duplicate references", { ...advice, stepUpdates: [{ id: "sauce", instruction: "Cook", ingredientIds: ["tomatoes", "tomatoes"] }] }],
+    ["unknown ingredient reference", { ...advice, stepUpdates: [{ id: "sauce", headline: "Cook", instruction: "Cook", ingredientIds: ["invented"] }] }],
+    ["duplicate references", { ...advice, stepUpdates: [{ id: "sauce", headline: "Cook", instruction: "Cook", ingredientIds: ["tomatoes", "tomatoes"] }] }],
     ["ingredient overwrite", { ...advice, additionalIngredients: [{ ...recipe().ingredients[0], quantity: 400 }] }],
     ["unreferenced addition", { ...advice, additionalIngredients: [{ id: "extra", name: "Extra", quantity: 1, unit: null }] }],
     ["empty reconciliation", { type: "reconcile_progress", message: "Next", completedSteps: [] }],
@@ -286,7 +286,7 @@ describe("adaptive CookingAgent", () => {
   it("rejects history edits even when another update was valid", async () => {
     const { agent } = setup([{ ...omission(), stepUpdates: [
       ...(omission() as Extract<AdaptiveAction, { type: "ingredient_change" }>).stepUpdates,
-      { id: "boil", instruction: "Boiled 400 g pasta.", ingredientIds: ["pasta"] },
+      { id: "boil", headline: "Cook the pasta", instruction: "Boiled 400 g pasta.", ingredientIds: ["pasta"] },
     ] }], 2);
     const before = agent.getCurrentStep().session;
     await assert.rejects(agent.adaptCooking("I don't have tomato paste."));
@@ -324,7 +324,7 @@ describe("adaptive CookingAgent", () => {
     await assert.rejects(agent.adaptCooking("Missing cheese"), /already in progress/);
     assert.throws(() => agent.completeCurrentStep("boil"), /already in progress/);
     assert.equal(agent.getCurrentStep().currentStep?.id, "boil");
-    store.adjustCookingInstructions("dinner", "boil", { ...advice, stepUpdates: [{ ...recipe().steps[0]!, instruction: "Boil gently." }] });
+    store.adjustCookingInstructions("dinner", "boil", { ...advice, stepUpdates: [{ ...recipe().steps[0]!, headline: "Boil gently", instruction: "Boil gently." }] });
     const externallyChanged = store.getSession("dinner");
     resolve(JSON.stringify(scaling()));
     await assert.rejects(adapting, /changed during/);

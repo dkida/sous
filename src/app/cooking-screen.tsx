@@ -3,7 +3,7 @@
 import CookingComposer from "./cooking-composer";
 import { languages, type Language } from "../shared/language";
 import { copy, servings, servingsLabel, stepsCompleted } from "../web/i18n";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState } from "react";
 import { VoiceTurn, recordMicrophone, transcribeRecording, playResponse, type VoiceState } from "../web/voice-client";
 import { formatIngredient } from "../web/ingredient-format";
 import type { CookingCommand, CookingReply, WebCookingState } from "../web/contracts";
@@ -21,9 +21,11 @@ export default function CookingScreen({ development = false, initialLanguage = "
   const [error, setError] = useState<CookingReply["error"]>();
   const [notice, setNotice] = useState("");
   const [ingredientsOpen, setIngredientsOpen] = useState(false);
+  const [compactInteractions, setCompactInteractions] = useState(false);
   const [voiceState, setVoiceState] = useState<VoiceState>("idle");
   const [voiceError, setVoiceError] = useState("");
   const [transcript, setTranscript] = useState("");
+  const ingredientEntry = !state.progress && !state.proposal;
   const voiceActive = !["idle", "error"].includes(voiceState);
   const voice = useRef<VoiceTurn | null>(null);
   const revision = useRef<string | undefined>(undefined);
@@ -33,15 +35,54 @@ export default function CookingScreen({ development = false, initialLanguage = "
   const submitVoice = useRef<(text: string, signal: AbortSignal) => Promise<CookingReply | null>>(async () => null);
   const lock = useRef(true);
   const instruction = useRef<HTMLHeadingElement>(null);
+  const kitchen = useRef<HTMLElement>(null);
+  const interactions = useRef<HTMLElement>(null);
+  const activeCooking = Boolean(state.progress?.currentStep);
+
+  useEffect(() => {
+    if (!activeCooking) return;
+    const root = kitchen.current;
+    const strip = interactions.current;
+    if (!root || !strip) return;
+    const mobile = window.matchMedia("(max-width: 600px)");
+    const viewport = window.visualViewport;
+    function measure() {
+      if (!root || !strip) return;
+      root.style.setProperty("--interaction-height", `${strip.getBoundingClientRect().height}px`);
+      // Safari can shrink only the visual viewport when the keyboard opens.
+      // Ignore pinch zoom; the controls must remain zoomable with the page.
+      const keyboardInset = mobile.matches && viewport?.scale === 1
+        ? Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop) : 0;
+      root.style.setProperty("--keyboard-inset", `${keyboardInset}px`);
+    }
+    const observer = new ResizeObserver(measure);
+    observer.observe(strip);
+    viewport?.addEventListener("resize", measure);
+    viewport?.addEventListener("scroll", measure);
+    window.addEventListener("resize", measure);
+    measure();
+    return () => {
+      observer.disconnect();
+      viewport?.removeEventListener("resize", measure);
+      viewport?.removeEventListener("scroll", measure);
+      window.removeEventListener("resize", measure);
+      root.style.removeProperty("--interaction-height");
+      root.style.removeProperty("--keyboard-inset");
+    };
+  }, [activeCooking]);
 
   useEffect(() => { document.documentElement.lang = language; }, [language]);
 
   useEffect(() => {
     const desktop = window.matchMedia("(min-width: 1001px)");
+    const phone = window.matchMedia("(max-width: 600px)");
     setIngredientsOpen(desktop.matches);
+    setCompactInteractions(phone.matches);
     const resize = (event: MediaQueryListEvent) => setIngredientsOpen(event.matches);
+    const resizePhone = (event: MediaQueryListEvent) => setCompactInteractions(event.matches);
     desktop.addEventListener("change", resize);
-    return () => desktop.removeEventListener("change", resize);
+    phone.addEventListener("change", resizePhone);
+    return () => { desktop.removeEventListener("change", resize); phone.removeEventListener("change", resizePhone); };
   }, []);
 
   useEffect(() => {
@@ -99,16 +140,17 @@ export default function CookingScreen({ development = false, initialLanguage = "
   useEffect(() => {
     voice.current = new VoiceTurn({
       language,
+      mode: ingredientEntry ? "ingredients" : "cooking",
       record: recordMicrophone,
       async token(signal) {
-        const response = await fetch("/api/voice/token", { method: "POST", signal });
+        const response = await fetch("/api/voice/token", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode: ingredientEntry ? "ingredients" : "cooking", language }), signal });
         if (!response.ok) throw new Error("Voice unavailable");
         return (await response.json()).token;
       },
       transcribe: (audio, token, signal) => transcribeRecording(audio, token, signal, language),
       submit: (text, signal) => submitVoice.current(text, signal),
       play: playResponse,
-      transcript: (text) => { if (mounted.current) setTranscript(text); },
+      transcript: (text) => { if (mounted.current) { setTranscript(text); if (ingredientEntry && text) setIngredients(text); } },
       state(value, error) {
         if (!mounted.current) return;
         setVoiceState(value);
@@ -123,7 +165,7 @@ export default function CookingScreen({ development = false, initialLanguage = "
     window.addEventListener("pagehide", stop);
     document.addEventListener("visibilitychange", hidden);
     return () => { voice.current?.cancel(); window.removeEventListener("pagehide", stop); document.removeEventListener("visibilitychange", hidden); };
-  }, [development, language]);
+  }, [development, language, ingredientEntry]);
 
   function startVoice() {
     if (lock.current) return;
@@ -144,20 +186,15 @@ export default function CookingScreen({ development = false, initialLanguage = "
   const stepIndex = recipe?.steps.findIndex((item) => item.id === step?.id) ?? -1;
   const nextStep = recipe?.steps[stepIndex + 1];
   const phase = completed ? 4 : progress ? 2 : state.proposal ? 1 : 0;
-  const sentences = step?.instruction.split(/(?<=[.!?])\s+/) ?? [];
-  const firstSentence = sentences[0] ?? "";
-  // A typographic split only: retain every word of the server-owned instruction.
-  const clauseMatch = firstSentence.length > 65 ? /(,\s+)|\s+(?=\()|\s+(?:and|then|while|until|according to)\s+/i.exec(firstSentence) : null;
-  const clause = clauseMatch && clauseMatch.index >= 25 ? clauseMatch : null;
-  const splitAt = clause ? clause.index + (clause[1] ? 1 : 0) : 0;
-  const hero = clause ? firstSentence.slice(0, splitAt) : firstSentence;
-  const detail = [clause ? firstSentence.slice(splitAt).trim() : "", ...sentences.slice(1)].filter(Boolean).join(" ");
+  // Retained development sessions may predate the explicit headline contract.
+  const hero = step?.headline ?? step?.instruction ?? "";
+  const detail = step?.instruction ?? "";
   const relevantIngredients = recipe?.ingredients.filter((item) => step?.ingredientIds.includes(item.id)) ?? [];
-  function submitIngredients(event: FormEvent) { event.preventDefault(); void send({ action: "propose", ingredients, language }); }
+  function submitIngredients() { if (ingredients.trim()) void send({ action: "propose", ingredients, language }); }
   function submitMessage() { void send({ action: "adapt", message }); }
 
   return (
-    <main className={`kitchen ${step ? "cooking" : ""}`} aria-busy={Boolean(busy)} lang={language}>
+    <main ref={kitchen} className={`kitchen ${step ? "cooking" : ""}`} aria-busy={Boolean(busy)} lang={language}>
       <div className="edition"><span>PASS / MISE EN PLACE</span><span>{t.oneThing}</span></div>
       <section className={`surface ${progress && !completed ? "is-cooking" : ""}`} aria-label={t.companion}>
         <header className="masthead">
@@ -175,11 +212,13 @@ export default function CookingScreen({ development = false, initialLanguage = "
 
         {!progress && !state.proposal && <div className="entry-layout">
           <div className="entry-main"><p className="eyebrow">{t.entryLabel}</p><h1>{t.whatDo}<br />{t.youHave}</h1><p className="intro">{t.introOne}<br />{t.introTwo}</p>
-            <form onSubmit={submitIngredients}>
-              <label className="eyebrow" htmlFor="ingredients">{t.counter}</label>
-              <textarea id="ingredients" maxLength={4000} rows={3} required placeholder={t.ingredientsPlaceholder} value={ingredients} onChange={(event) => setIngredients(event.target.value)} disabled={voiceActive || Boolean(busy)} />
-              <button className="primary" disabled={voiceActive || Boolean(busy) || !ingredients.trim() || error?.code === "missing"}>{busyCopy || t.findDish}<span aria-hidden="true">→</span></button>
-            </form>
+            <div className="ingredient-composer">
+              <CookingComposer mode="ingredients" language={language} message={ingredients} busy={Boolean(busy) || error?.code === "missing"} systemStatus={busyCopy}
+                voiceState={voiceState} voiceError={voiceError} transcript={transcript}
+                onMessage={(value) => { setIngredients(value); if (voiceState === "error") { setVoiceError(""); setVoiceState("idle"); } }}
+                onSend={submitIngredients} onRecord={startVoice}
+                onFinish={() => { void voice.current?.finish(); }} onCancel={() => voice.current?.cancel()} />
+            </div>
           </div>
           <aside className="entry-aside"><p className="eyebrow">MISE EN PLACE</p><p>{t.startWith}<br />{t.whatYouHave}</p><div className="aside-rule">{t.includeQuantities}</div><span className="small-copy">{t.takesYou}</span></aside>
         </div>}
@@ -193,11 +232,11 @@ export default function CookingScreen({ development = false, initialLanguage = "
           <div className="cooking-work">
             <aside className="work-rail" aria-label={`${t.step} ${stepIndex + 1} ${t.of} ${recipe.steps.length}`}><strong>{number(stepIndex + 1)}</strong><span className="rail-caption">{t.inKitchen}</span><div className="rail-marks" aria-hidden="true">{recipe.steps.map((item, index) => <i key={item.id} className={index <= stepIndex ? "passed" : ""} />)}</div></aside>
             <div className="step-content">
-            <div className="current-action"><p className="eyebrow">{t.step} {number(stepIndex + 1)} / {t.doNow}</p><h1 ref={instruction} tabIndex={-1} className={hero.length > 80 ? "long-instruction" : undefined}>{hero}</h1>{detail && <p className="instruction-detail">{detail}</p>}
+            <div className="current-action"><p className="eyebrow">{t.step} {number(stepIndex + 1)} / {t.doNow}</p><h1 ref={instruction} tabIndex={-1} className={hero.length > 48 ? "long-instruction" : undefined}>{hero}</h1>{detail && <p className="instruction-detail">{detail}</p>}
               {relevantIngredients.length > 0 && <div className="quantities"><p className="eyebrow">{t.forStep}</p><ul>{relevantIngredients.map((item) => <li key={item.id}>{formatIngredient(item, language)}</li>)}</ul></div>}
             </div>
             {state.response && <div className="adaptation" role="status"><p className="eyebrow">{state.response.kind === "changed" ? t.updated : state.response.kind === "clarification" ? t.question : t.fromSous}</p><p>{state.response.message}</p></div>}
-            <div className="up-next"><span className="eyebrow">{nextStep ? t.upNext : t.lastStep}</span><p>{nextStep ? nextStep.instruction : t.timeToEat}</p></div>
+            <div className="up-next"><span className="eyebrow">{nextStep ? t.upNext : t.lastStep}</span><p>{nextStep ? nextStep.headline ?? nextStep.instruction : t.timeToEat}</p></div>
             </div>
             <aside className="cooking-meta" aria-label={t.fullIngredients}><p className="eyebrow">{t.fullRecipe}</p><details open={ingredientsOpen} onToggle={(event) => setIngredientsOpen(event.currentTarget.open)}><summary>{t.ingredients}</summary><ul>{recipe.ingredients.map((item) => <li key={item.id}>{formatIngredient(item, language)}</li>)}</ul></details><p className="recipe-metadata">{servings(recipe.servings, language)} · {t.cooking}</p><button className="text-button start-over" disabled={voiceActive || Boolean(busy)} onClick={() => void send({ action: "reset" })}>{t.startOver}</button></aside>
           </div>
@@ -205,8 +244,8 @@ export default function CookingScreen({ development = false, initialLanguage = "
 
         {completed && recipe && <div className="finished"><p className="eyebrow">{number(recipe.steps.length)} / {number(recipe.steps.length)} {t.stepsComplete}</p><h1>{t.toThe}<br />{t.table}</h1><p className="finished-dish">{recipe.title}</p><p className="intro">{t.enjoy}</p>{state.response && <p className="completion-response">{state.response.message}</p>}<div className="finished-facts"><span>{servings(recipe.servings, language)}</span><span>{stepsCompleted(recipe.steps.length, language)}</span></div></div>}
 
-        {(progress || state.proposal) && <footer className="action-strip">
-          {(step || voiceActive) && <CookingComposer language={language} message={message} busy={Boolean(busy)} systemStatus={busy === "thinkingChange" ? t.thinking : t.working} voiceState={voiceState}
+        {(progress || state.proposal) && <footer ref={interactions} className="action-strip">
+          {(step || voiceActive) && <CookingComposer compact={Boolean(step) && compactInteractions} language={language} message={message} busy={Boolean(busy)} systemStatus={busy === "thinkingChange" ? t.thinking : t.working} voiceState={voiceState}
               voiceError={voiceError} transcript={transcript}
               onMessage={(value) => { setMessage(value); if (voiceState === "error") { setVoiceError(""); setVoiceState("idle"); } }}
               onSend={submitMessage} onRecord={startVoice}

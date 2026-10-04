@@ -1,0 +1,77 @@
+{
+  "text": "Świetnie, cebula i czosnek zostały dodane. Przechodzimy do dodania pomidorów. Wrzuć na patelnię 250 g pomidorów koktajlowych i smaż wszystko razem przez około 4 minuty, od czasu do czasu mieszając, aż pomidory zaczną pękać i puszczać sok.",
+  "language": "pl",
+  "inferenceCalls": 1,
+  "state": {
+    "proposal": null,
+    "progress": {
+      "session": {
+        "id": "13236e39-5a4d-44b7-97a7-7336c80bb03e",
+        "recipe": {
+          "id": "tomato-test",
+          "title": "Sos z pomidorami koktajlowymi",
+          "servings": 2,
+          "ingredients": [
+            {
+              "id": "onion",
+              "name": "cebula",
+              "quantity": 1,
+              "unit": "piece"
+            },
+            {
+              "id": "garlic",
+              "name": "czosnek",
+              "quantity": 2,
+              "unit": "cloves"
+            },
+            {
+              "id": "tomatoes",
+              "name": "pomidory koktajlowe",
+              "quantity": 250,
+              "unit": "g"
+            }
+          ],
+          "steps": [
+            {
+              "id": "saute",
+              "headline": "Dodaj cebulę i czosnek",
+              "instruction": "Dodaj jedną pokrojoną cebulę i 2 posiekane ząbki czosnku do rozgrzanej patelni.",
+              "ingredientIds": [
+                "onion",
+                "garlic"
+              ]
+            },
+            {
+              "id": "tomatoes",
+              "headline": "Dodaj pomidory",
+              "instruction": "Wrzuć na patelnię 250 g pomidorów koktajlowych i smaż wszystko razem przez około 4 minuty, od czasu do czasu mieszając, aż pomidory zaczną pękać i puszczać sok.",
+              "ingredientIds": [
+                "tomatoes"
+              ]
+            }
+          ]
+        },
+        "status": "cooking",
+        "currentStepId": "tomatoes",
+        "completedStepIds": [
+          "saute"
+        ],
+        "substitutions": [],
+        "quantityChanges": [],
+        "timers": []
+      },
+      "currentStep": {
+        "id": "tomatoes",
+        "headline": "Dodaj pomidory",
+        "instruction": "Wrzuć na patelnię 250 g pomidorów koktajlowych i smaż wszystko razem przez około 4 minuty, od czasu do czasu mieszając, aż pomidory zaczną pękać i puszczać sok.",
+        "ingredientIds": [
+          "tomatoes"
+        ]
+      }
+    },
+    "response": {
+      "kind": "changed",
+      "message": "Świetnie, cebula i czosnek zostały dodane. Przechodzimy do dodania pomidorów."
+    }
+  }
+}

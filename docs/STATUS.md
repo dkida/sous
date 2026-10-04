@@ -1,6 +1,6 @@
 # Sous — Project Status
 
-Last updated: 2026-10-04
+Last updated: 2026-10-05
 
 Product source of truth: [PROJECT.md](PROJECT.md).
 
@@ -10,9 +10,257 @@ Product source of truth: [PROJECT.md](PROJECT.md).
 [Task 4](TASK4.md) is complete: the responsive web interface exposes the existing
 cooking agent. Task 5 is complete; the user reports voice is working. Task 5.1
 English/Polish support is complete, including live Polish cooking and provider
-verification. Task 5.2 is implemented and passes automated checks; the preview
-is restored, with remaining manual mobile checks documented below. English remains the public
-demo default. Task 6 has not been started.
+verification. Task 5.2 and the subsequent instruction, ingredient voice, spoken
+quantity and mobile interaction refinements are complete. The preview retains
+the active cooking session. English remains the public demo default. Task 6
+Phase 1 is complete with a **NO-GO** decision for wake-word implementation in this
+milestone; Phase 2 was not started. Push-to-talk remains available.
+
+Latest verification on 2026-10-05: **212 tests passed**, typecheck, isolated
+production webpack build and whitespace checks passed. Responsive cooking was
+verified at 390 × 844, 430 × 932 and 360 × 800, including simulated keyboard space
+and all voice state layouts. Physical phone/Safari, microphone and noisy-kitchen
+checks remain pending as detailed below. Task 7 has not been started.
+
+## Mobile cooking interaction refinement before Task 7
+
+Implemented on 2026-10-05. Task 7 remains unstarted.
+
+- At phone widths (600 px and below), the existing Ask Sous composer and
+  deterministic Done / next action share one fixed bottom interaction area.
+  Idle text, mic and send fit on one row, with short EN/PL placeholders; focusing
+  the same textarea expands it for typing. Enter, Shift+Enter, IME handling,
+  submission locks and all voice callbacks retain their existing implementation.
+  Ingredient entry, proposal and completion keep their existing treatment.
+- Mobile cooking spacing is tighter around the masthead, headline, quantities,
+  plan update and secondary recipe context. Full actionable instructions and
+  model-generated plan messages remain intact; adaptive/domain behavior is unchanged.
+- Decorative “SOUS / JEDNO DANIE, OD POCZĄTKU DO KOŃCA.” / English footer is hidden
+  only during active mobile cooking. No replacement decoration was added. Wide
+  desktop/tablet rules and the desktop footer/composer stay in flow.
+- Mic, send, Stop, Cancel and Done retain at least 48 px touch targets on mobile.
+  Status, recognized speech and accessible errors stay in the same composer.
+  A ResizeObserver reserves the measured bottom panel height plus a 16 px gap,
+  including expanded input, listening Cancel and error rows, so final content
+  scrolls clear of the controls. Safe-area bottom padding, viewport-fit=cover,
+  resizes-content and a VisualViewport keyboard inset support reduced keyboard
+  space without disabling pinch zoom.
+
+Verification:
+
+- Real retained Polish cooking preview inspected at **390 × 844**, **430 × 932**
+  and **360 × 800**. At initial scroll position, Ask Sous, mic and Done were visible;
+  the complete tomato instruction and **250 g** quantity remained prominent.
+  Idle panel measured 126 px. No horizontal page overflow was observed.
+- Opened full recipe ingredients and scrolled to the end at 360 px: Start over
+  cleared the fixed panel (content bottom 642 px, panel top 674 px). Secondary
+  content remains scrollable. No recipe progression, generation or reset was made.
+- Typed a draft with Shift+Enter, then simulated keyboard space at **360 × 440**:
+  the focused 88 px textarea, enabled send, mic and Done stayed inside the viewport.
+  Cleared the temporary draft after verification; no message was submitted.
+- A temporary localhost fixture rendered the actual CookingScreen/composer with
+  mocked voice state callbacks for listening, transcribing, thinking, speaking
+  and error. All controls fit at 360 × 800; Stop/Cancel were reachable, targets
+  measured 48 px high, and reserved padding tracked panel growth. No provider or
+  microphone calls were made in this visual fixture.
+- Desktop **1280 × 900** retained the full composer, normal action-strip flow,
+  large typography, recipe context and visible decorative footer.
+- Existing **212 tests passed**, typecheck, isolated production webpack build and
+  `git diff --check` passed. Build output was kept separate from the live preview.
+- Evidence: [390 px cooking](design/mobile-cooking-verification/cooking-390.jpg),
+  [430 px cooking](design/mobile-cooking-verification/cooking-430.jpg),
+  [listening](design/mobile-cooking-verification/listening-360.jpg),
+  [speaking](design/mobile-cooking-verification/speaking-360.jpg),
+  [error](design/mobile-cooking-verification/error-360.jpg),
+  [desktop](design/mobile-cooking-verification/desktop.jpg).
+  Physical phones, Safari/iOS browser chrome, virtual keyboards and nonzero
+  device safe-area insets remain unverified; viewport resizing is a simulation.
+
+## Final focused product refinement before Task 7
+
+Implemented on 2026-10-04 without starting Task 7.
+
+- Generated and adaptive RecipeStep objects now require a separate short imperative
+  `headline` (prefer 2–5 words, validated maximum 8) and full `instruction`, with
+  explicit EN/PL examples in the shared generation rules. Missing/verbose headlines
+  fail validation before state changes; detailed instructions are never truncated.
+  The cooking UI renders these fields directly with restrained responsive `clamp()`
+  typography and wrapping. Old retained development snapshots can still render
+  their full instruction until a fresh plan is generated.
+- Ask Sous uses the exact neutral EN/PL placeholders requested.
+- Initial ingredient entry uses the same ruled composer and VoiceTurn/MediaRecorder/
+  ElevenLabs STT lifecycle. Stop produces an editable ingredient draft; the existing
+  explicit proposal action starts generation. Both languages, typed fallback,
+  permission denial, STT failure, cancellation (including late results), duplicate
+  start/finish and cleanup are covered. Pre-session token issuance is limited to
+  explicit entry mode with a same-origin browser Origin and creates no cooking flow.
+  No acknowledgement TTS, extra generation path or continuous listening was added.
+- Current-step speech preserves the complete instruction and supplements only
+  missing known quantities for the current step's structured ingredient references.
+  Common EN/PL numeric/word quantities, inflections and partial uses avoid awkward
+  duplication. Null quantities stay unknown; unrelated recipe ingredients, timer
+  numbers and temperatures cannot become ingredient amounts. Polish fallback uses
+  concise quantity labels for arbitrary names. Repeat/current/next-step speech
+  shares this formatter; adaptive advice/clarification keeps its existing TTS path.
+  English “what now?” is also an exact deterministic current-step command.
+
+Verification:
+
+- `npm test`: **205 tests passed** (14 additional focused regressions). Two existing
+  mocked CLI subprocess tests required approved execution outside the sandbox's
+  `spawnSync EPERM` restriction. No live providers are used by the test suite.
+- `npm run typecheck`, production `npm run build -- --webpack` and
+  `git diff --check` passed. Production build used an isolated temporary source
+  copy with the installed dependencies and no environment files, preserving the
+  active preview's build output.
+- Manually exercised a temporary browser harness rendering the actual CookingScreen,
+  composer, VoiceTurn and browser STT/playback functions against the actual HTTP
+  handlers, cooking service, live Flash-Lite and ElevenLabs. Native MediaRecorder
+  captured synthetic EN/PL fixture speech via Web Audio; no physical microphone
+  speech or ambient audio was used. The harness and provider override remained
+  outside the application source.
+- Polish fixture: “Mam 200 gramów makaronu, pomidory, cebulę i śmietanę.” Scribe
+  returned an editable ingredient list (with “dwieście”); edited it, submitted the
+  existing proposal action and accepted the generated recipe. The screen showed
+  **UGOTUJ MAKARON** above the full instruction. Spoken “co teraz?” and “powtórz”
+  both reached TTS with the same actionable **200 g makaronu** instruction, returned
+  to idle without a voice error and kept the current step unchanged.
+- English fixture: “I have 200 grams of pasta, tomatoes, an onion and cream.”
+  Scribe returned an editable draft; edited it, used the same proposal action,
+  and verified the English proposal and recipe flow.
+- Inspected desktop and 390×844 mobile ingredient/cooking layouts. No horizontal
+  overflow was observed; mic controls were at least 56×56 px, and the Polish
+  action stayed compact above the complete cooking detail.
+- Evidence: [Polish transcript review](design/refinement-verification/polish-ingredient-review.jpg),
+  [Polish cooking](design/refinement-verification/polish-cooking.jpg),
+  [mobile cooking](design/refinement-verification/mobile-polish-cooking.jpg),
+  [English listening](design/refinement-verification/mobile-english-listening.jpg),
+  [English transcript review](design/refinement-verification/mobile-english-review.jpg),
+  [English cooking](design/refinement-verification/english-cooking.jpg),
+  [retained TTS instructions](design/refinement-verification/spoken-instructions.json).
+- Physical microphone speech, physical phones, Safari and noisy-kitchen recognition
+  remain unverified by the agent. These functional synthetic checks do not establish
+  real-world microphone accuracy or latency.
+
+### Adaptive progression speech correction
+
+Browser feedback exposed a remaining functional gap: natural completion reports
+reach `reconcile_progress`, but adaptive TTS previously read only the model's
+acknowledgement (“Przechodzimy do pomidorów”) even after the structured state
+advanced to a step with a complete 250 g tomato instruction. The preview reload
+fix alone did not address this path.
+
+Speech now compares the authoritative current step ID before and after the
+operation. When an adaptive response advances cooking, it speaks the acknowledgement
+followed by the complete new instruction through the existing current-step
+quantity formatter. Same-step advice, plan adjustments and clarification keep
+their existing message behavior. Final completion stays a completion response.
+An acknowledgement already containing the complete spoken instruction is not
+repeated; no extra model request is made to compose speech. The formatter also
+recognizes “pomidory koktajlowe” / “pomidorów koktajlowych”, so the full 250 g
+instruction does not trigger a duplicate quantity label.
+
+- Added six regression cases: EN/PL adaptive progression with embedded or omitted
+  instruction quantities, final-step adaptive completion, and an acknowledgement
+  already containing the complete instruction. Voice integration tests run through
+  actual cooking and retained-speech HTTP handlers with mocked providers, checking
+  the full instruction, one quantity, timing, progression and deterministic repeat.
+- **212 tests passed**, typecheck, isolated production webpack build and
+  `git diff --check` passed. Existing advice, clarification, deterministic commands,
+  STT failures, cancellation, duplicate/stale guards and playback checks still pass.
+- Live browser verification used the actual CookingScreen/VoiceTurn/MediaRecorder
+  with a controlled two-step recipe fixture and synthetic Polish speech: “Dodałem
+  cebulę i czosnek na patelnię.” Real ElevenLabs STT → one live Flash-Lite adaptive
+  reconciliation → real ElevenLabs TTS → browser playback succeeded. Speech was:
+  “Świetnie, cebula i czosnek zostały dodane. Przechodzimy do dodania pomidorów.
+  Wrzuć na patelnię 250 g pomidorów koktajlowych i smaż wszystko razem przez około
+  4 minuty, od czasu do czasu mieszając, aż pomidory zaczną pękać i puszczać sok.”
+  It included 250 once, reached the tomato step, and returned to idle without a
+  voice error. No physical microphone or ambient audio was used.
+- Evidence: [transition screen](design/adaptive-speech-verification/polish-transition.jpg),
+  [actual generated speech](design/adaptive-speech-verification/response.mp3),
+  [speech and resulting fixture state](design/adaptive-speech-verification/result.json).
+  The temporary harness did not modify, advance or reset the user's active cooking
+  session. Task 7 remains unstarted.
+
+### Preview speech correction
+
+The live preview retained an obsolete WebCookingService instance across development
+reloads, so a tomato step with a canonical 400 g quantity still used the earlier
+instruction-only speech handler. The server now re-creates the transport service
+with current code and shares its retained flow map, preserving the recipe, current
+step, revisions, duplicate-request guards and existing agents. New flows use the
+current provider factory and recipe-generation prompt. No quantity or tomato count
+is inferred: the observed live recipe specifies **400 g tomatoes**.
+
+Added a regression that replaces obsolete handlers while retaining the tomato
+step; Polish current/repeat both produce **400 gramów**, make no model call, retain
+state/revision, reject duplicate/stale requests and share reset semantics. The
+existing preview accepted typed “powtórz” and stayed at step 3 without an error.
+`npm test`: **206 passed**; typecheck, isolated production webpack build and
+`git diff --check` passed. Actual microphone playback of this retained session is
+left for the user to verify; no live recipe reset or regeneration was performed.
+
+## Task 6 — Wake-word feasibility spike
+
+Completed the required research before writing application code on 2026-10-04.
+The full eight-part assessment, primary sources and decision are in
+[WAKE_WORD_FEASIBILITY.md](WAKE_WORD_FEASIBILITY.md).
+
+- **NO-GO; wake-word work stopped.** Local browser detection is technically
+  possible, but no reviewed candidate establishes a reliable, legally ship-ready,
+  reasonably scoped custom “Hey Sous” mode for this personal open-source project.
+  No wake-word technology was selected or installed; no hands-free UI was added.
+- **Candidates:** Porcupine Web offers packaged local inference and custom WASM
+  keywords. Its current enterprise trial/ongoing service terms and browser
+  AccessKey exposure leave the shipping arrangement unresolved. openWakeWord's
+  upstream browser example sends ambient audio to Python; a genuinely local
+  implementation needs a port and training. Its code is Apache-2.0 but supplied
+  models are CC BY-NC-SA. sherpa-onnx has a real local WASM KWS demo and custom
+  tokenized phrases, but its deprecated capture/lifecycle needs modernization
+  and the reviewed pretrained weights lack established redistribution terms.
+  Forced-local Web Speech is experimental general ASR, without verified custom
+  wake reliability. Primary references are linked beside each finding in the report.
+- **Browser limitations:** Chrome 139+ documents local Web Speech; runtime
+  feature/language-pack checks remain necessary. Reviewed compatibility data has
+  no local-processing Safari/iOS or Chrome Android support; Firefox is preview
+  only. Porcupine lists Safari, but no candidate was physically verified in Sous.
+  HTTPS/localhost permission, worker/WASM assets, conditional cross-origin
+  isolation, hidden-page suspension and asynchronous autoplay need handling.
+  Background operation remains out of scope.
+- **Privacy:** no ambient microphone capture or provider calls were made during
+  this spike. Existing finite push-to-talk recording/STT behavior remains as
+  documented in VOICE.md. Local inference must not be confused with zero network
+  activity; default Web Speech and Python streaming cannot satisfy the local
+  ambient-detection claim. No new privacy claim is made for an unimplemented mode.
+- **Cost/reliability:** report distinguishes published model/native figures from
+  browser measurements. Porcupine's published English parameter file is 962 KB
+  before runtime/custom keyword; sherpa's English model components total about
+  5M int8 or 13.7M FP32 before WASM/JS. No wake latency, CPU, memory, battery or
+  acoustic accuracy was measured. The short phrase, accents, kitchen noise,
+  false activations, capture handoff, automatic endpointing and TTS echo need
+  physical verification before calling the mode reliable.
+- **Existing voice/spoken-output review:** the shared resolver already handles
+  EN/PL deterministic commands. Speech selects the current instruction,
+  completion or adaptive message; the prompt already requests short actionable
+  advice and urgent action first. No evidence warrants dropping cooking details
+  or changing VoiceTurn, CookingAgent, the composer, ElevenLabs or providers.
+- **Actual wake devices/browsers tested: none.** No physical microphone, phone,
+  Safari or noisy-kitchen validation is claimed. Earlier synthetic Task 5 tests
+  establish the existing pipeline only. Task 7 was not read or started.
+
+Verification on 2026-10-04:
+
+- `npm test`: **191 tests passed**. The sandbox initially blocked two existing
+  mocked CLI subprocess tests with `spawnSync EPERM`; the full unchanged suite
+  passed with approved execution outside that restriction. No live providers
+  or credentials are used by these tests.
+- `npm run typecheck` and `npm run build -- --webpack` passed in an isolated
+  temporary source copy using the existing installed dependencies and no local
+  environment files. This avoids rebuilding the active preview's `.next` output.
+- `git diff --check` passed; the new report was also checked for trailing whitespace.
+- Documentation-only result; no application code, dependencies or credentials
+  changed. Push-to-talk, typing and existing cancellation/error guards are intact.
 
 ## Task 5.2 — Unified cooking composer
 
@@ -723,7 +971,7 @@ The following checks passed after Step 2 implementation:
 ## Intentionally out of scope
 
 - Timer scheduling and unrestricted model-directed state replacement.
-- Hands-free use, wake words, always-on/background listening and Task 6.
+- Wake-word/hands-free implementation after the Task 6 NO-GO; background listening.
 - Database, authentication and deployment.
 
 ## Remaining Task 5 verification
@@ -732,4 +980,4 @@ Real STT, TTS, adaptive and clarification voice turns and phase latency are veri
 with synthesized input. The user reports Task 5 voice is working. Physical Polish microphone speech,
 Safari and physical mobile devices have not been tested by the agent; no
 ambient microphone audio was submitted during automated/manual agent checks.
-Task 6 has not been started.
+Task 6 feasibility is complete with a NO-GO; no wake-word mode is implemented.

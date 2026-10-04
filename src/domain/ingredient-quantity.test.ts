@@ -7,9 +7,9 @@ function setup(prepared: boolean) {
   const store = new CookingSessionStore();
   store.createSession("dinner", { id: "vegetables", title: "Chicken and vegetable pasta", servings: 2,
     ingredients: [{ id: "carrot", name: "carrot", quantity: 1, unit: "piece" }],
-    steps: [{ id: "prep", instruction: "Dice 1 carrot.", ingredientIds: ["carrot"] },
-      { id: "pan", instruction: "Add the diced carrot to the pan.", ingredientIds: ["carrot"] },
-      { id: "serve", instruction: "Serve the pasta with the carrot.", ingredientIds: ["carrot"] }] });
+    steps: [{ id: "prep", headline: "Dice 1 carrot", instruction: "Dice 1 carrot.", ingredientIds: ["carrot"] },
+      { id: "pan", headline: "Add the carrots", instruction: "Add the diced carrot to the pan.", ingredientIds: ["carrot"] },
+      { id: "serve", headline: "Serve the pasta", instruction: "Serve the pasta with the carrot.", ingredientIds: ["carrot"] }] });
   store.startSession("dinner");
   if (prepared) store.completeCurrentStep("dinner", "prep");
   return store;
@@ -18,9 +18,9 @@ function correction(id: string, prepared: boolean, quantity = 3): Extract<Adapti
   return { type: "ingredient_change", message: `Use ${quantity} carrots in total.`, originalIngredientId: "carrot",
     replacement: { id, name: "carrot", quantity, unit: "piece" }, reason: "Requested quantity correction.", additionalIngredients: [],
     stepUpdates: [
-      ...(!prepared ? [{ id: "prep", instruction: `Dice ${quantity} carrots.`, ingredientIds: [id] }] : []),
-      { id: "pan", instruction: `Dice any additional carrots needed, then add ${quantity} carrots in total to the pan.`, ingredientIds: [id] },
-      { id: "serve", instruction: `Serve the pasta with ${quantity} carrots.`, ingredientIds: [id] },
+      ...(!prepared ? [{ id: "prep", headline: "Dice the carrots", instruction: `Dice ${quantity} carrots.`, ingredientIds: [id] }] : []),
+      { id: "pan", headline: "Add the carrots", instruction: `Dice any additional carrots needed, then add ${quantity} carrots in total to the pan.`, ingredientIds: [id] },
+      { id: "serve", headline: "Serve the pasta", instruction: `Serve the pasta with ${quantity} carrots.`, ingredientIds: [id] },
     ] };
 }
 
@@ -67,7 +67,7 @@ it("rejects incomplete corrections and attempts to overwrite completed preparati
   const action = correction("three-carrots", true);
   const invalid = [
     { ...action, stepUpdates: action.stepUpdates.slice(0, 1) },
-    { ...action, stepUpdates: [...action.stepUpdates, { id: "prep", instruction: "Diced 3 carrots.", ingredientIds: ["three-carrots"] }] },
+    { ...action, stepUpdates: [...action.stepUpdates, { id: "prep", headline: "Dice the carrots", instruction: "Diced 3 carrots.", ingredientIds: ["three-carrots"] }] },
     { ...action, replacement: { ...action.replacement!, quantity: -1 } },
     { ...action, replacement: { ...action.replacement!, unit: "g" } },
     { ...action, replacement: { ...action.replacement!, id: "carrot", name: "broccoli" } },
@@ -86,6 +86,6 @@ it("rejects a duplicate carrot disguised as an addition instead of accumulating 
   const before = store.getSession("dinner");
   assert.throws(() => store.adjustCookingInstructions("dinner", "pan", { type: "cooking_problem", message: "Use 3 carrots.",
     additionalIngredients: [{ id: "three-carrots", name: "Carrot", quantity: 3, unit: "pieces" }],
-    stepUpdates: [{ id: "pan", instruction: "Add 3 carrots.", ingredientIds: ["three-carrots"] }] }));
+    stepUpdates: [{ id: "pan", headline: "Add 3 carrots", instruction: "Add 3 carrots.", ingredientIds: ["three-carrots"] }] }));
   assert.deepEqual(store.getSession("dinner"), before);
 });

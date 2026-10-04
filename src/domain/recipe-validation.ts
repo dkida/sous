@@ -18,6 +18,10 @@ export function hasOnlyKeys(value: Record<string, unknown>, keys: string[]): boo
   return Object.keys(value).every((key) => keys.includes(key));
 }
 
+export function isStepHeadline(value: unknown): value is string {
+  return isNonEmptyString(value) && value.trim().split(/\s+/u).length <= 8 && !/[\r\n]/u.test(value);
+}
+
 /** Runtime boundary: build a detached Recipe from untrusted input. */
 export function validateRecipe(value: unknown): Recipe {
   if (!isRecord(value) || !hasOnlyKeys(value, ["id", "title", "servings", "ingredients", "steps"])) {
@@ -55,12 +59,13 @@ export function validateRecipe(value: unknown): Recipe {
   }
   const stepIds = new Set<string>();
   const steps = value.steps.map((step: unknown) => {
-    if (!isRecord(step) || !hasOnlyKeys(step, ["id", "instruction", "ingredientIds"]) || !isNonEmptyString(step.id)) {
+    if (!isRecord(step) || !hasOnlyKeys(step, ["id", "headline", "instruction", "ingredientIds"]) || !isNonEmptyString(step.id)) {
       invalid("Recipe step IDs must be non-empty and unique.");
     }
     const id = step.id.trim();
     if (stepIds.has(id)) invalid("Recipe step IDs must be non-empty and unique.");
     stepIds.add(id);
+    if (!isStepHeadline(step.headline)) invalid("Step headlines must be short, single-line actions of at most eight words.");
     if (!isNonEmptyString(step.instruction)) invalid("Step instructions must be non-empty strings.");
     if (!Array.isArray(step.ingredientIds) || !step.ingredientIds.every(isNonEmptyString)) {
       invalid("Step ingredient references must be an array of ingredient IDs.");
@@ -69,7 +74,7 @@ export function validateRecipe(value: unknown): Recipe {
     if (references.some((reference) => !ingredientIds.has(reference)) || new Set(references).size !== references.length) {
       invalid("Step ingredient references must be known and unique.");
     }
-    return { id, instruction: step.instruction.trim(), ingredientIds: references };
+    return { id, headline: step.headline.trim(), instruction: step.instruction.trim(), ingredientIds: references };
   });
   return { id: value.id.trim(), title: value.title.trim(), servings: value.servings, ingredients, steps };
 }

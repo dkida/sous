@@ -6,6 +6,8 @@ export type VoiceState = "idle" | "listening" | "transcribing" | "thinking" | "s
 export interface Recording { finish(): Promise<Blob>; cancel(): void }
 export interface VoicePorts {
   language?: Language;
+  /** Ingredient capture ends at an editable transcript, before proposal submission. */
+  mode?: "ingredients" | "cooking";
   record(): Promise<Recording>;
   token(signal: AbortSignal): Promise<string>;
   transcribe(audio: Blob, token: string, signal: AbortSignal): Promise<string>;
@@ -75,6 +77,12 @@ export class VoiceTurn {
       if (!this.isCurrent(generation)) return;
       if (!text.trim() || text.length > 4000) throw new Error("Empty transcript");
       this.ports.transcript(text);
+      if (this.ports.mode === "ingredients") {
+        this.cleanup();
+        this.ports.state("idle");
+        metrics.outcome = "success";
+        return;
+      }
       this.ports.state("thinking");
       phase = "agent";
       const agent = performance.now();

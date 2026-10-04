@@ -17,8 +17,11 @@ Missing voice configuration does not prevent cooking through text/buttons.
 
 ## Browser and server responsibilities
 
-1. During active cooking, use the microphone in the unified **Ask Sous** composer,
-   allow microphone access, speak, then press **Stop** to finish and send. **Cancel**
+1. On ingredient entry or during active cooking, use the microphone in the unified **Ask Sous** composer,
+   allow microphone access and speak. On entry, **Stop** finishes transcription into
+   the existing ingredient draft; review/edit it, then use **Find something to cook**.
+   Entry capture makes no proposal or TTS request automatically. During cooking,
+   **Stop** finishes and sends the turn. **Cancel**
    discards the recording. While playback runs, **Stop** stops speech. A 30-second limit
    finishes automatically; audio is capped at 5 MB. There is no background
    microphone or wake word. Microphone tracks stop immediately on finish/cancel,
@@ -47,8 +50,12 @@ Missing voice configuration does not prevent cooking through text/buttons.
    TTS failure leaves the already committed cooking state and text response intact.
 
 The browser has only a time-bound, one-use STT credential (documented expiry:
-15 minutes), never the long-lived key. The token and speech endpoints require an
-active/retained cookie flow and reject cross-origin requests. Responses are
+15 minutes), never the long-lived key. The speech endpoint requires a
+retained cookie flow. Token issuance also supports explicit ingredient-entry mode
+before a flow exists, requires a same-origin browser Origin in that mode, and
+rejects expired sessions or entry capture after a proposal/cooking session exists.
+Token issuance never creates a cooking agent or recipe flow. Both endpoints reject
+cross-origin requests. Responses are
 uncached. Provider implementation is outside the cooking domain behind the small
 `SpeechProvider` interface.
 
@@ -149,8 +156,9 @@ A physical microphone spoken-command check on the user's browser remains pending
   samples. Quota under load, natural/noisy speech accuracy and other voices still
   depend on the account/device.
 - Speech is automatic for voice turns, not every typed interaction or UI label.
-  During cooking, voice operates the active session; ingredient entry and proposal
-  acceptance retain their existing typed/button flow.
+  During cooking, voice operates the active session. Ingredient capture ends at
+  an editable draft and uses the existing proposal submit path; proposal acceptance
+  retains its existing button flow.
 
 ## API references checked on 2026-10-04
 
@@ -183,3 +191,32 @@ TTS took 1.68 seconds in one functional sample. See
 [measurements](design/task51-verification/live-metrics.json). This used the shared
 STT function in Node, not physical microphone capture or browser playback; the
 complete Polish UI flow was manually tested separately in the production browser.
+
+## Final product refinement — 2026-10-04
+
+RecipeStep now separates a short imperative `headline` (prefer 2–5 words, maximum
+8) from a complete `instruction`, for both generation and adaptive step updates.
+The visual heading uses headline; all quantities, timing, heat and safety details
+stay in instruction. No instruction is sliced or ellipsized.
+
+Deterministic current/repeat/progression speech uses the complete instruction plus
+only missing known quantities from the current step's ingredient references. The
+formatter recognizes common numeric/word amounts and EN/PL units and food forms,
+including partial amounts, so it does not append a recipe total when the instruction
+already specifies that ingredient's use. Unknown quantities remain unknown.
+Fallback quantity labels preserve arbitrary Polish ingredient names without
+guessing their grammatical case. Adaptive advice and clarification keep their
+existing spoken message path. When an adaptive completion report actually changes
+the current step ID, speech adds the full newly reached step instruction after the
+acknowledgement, unless that complete instruction is already in the message. This
+uses the existing deterministic formatter and adds no inference request. Completion
+of the final step keeps the completion response; deterministic commands do not
+invoke inference.
+
+Ingredient mode reuses VoiceTurn, MediaRecorder and ElevenLabs Scribe v2 with
+`eng` / `pol`. Its shared lock, generation IDs, aborts, capture limits and track
+cleanup apply before cooking too. Permission/STT failure leaves the typed draft
+intact; cancellation also discards late transcription. Cancel remains available
+during entry transcription. No TTS acknowledgement, wake word or continuous
+listening is added. Live synthetic-speech and responsive verification is recorded
+in [STATUS.md](STATUS.md). Physical microphone/noisy-kitchen checks remain pending.

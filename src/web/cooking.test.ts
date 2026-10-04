@@ -11,7 +11,7 @@ import type { CookingReply } from "./contracts";
 const proposal = { dishName: "Tomato Pasta", description: "A simple tomato sauce.", estimatedCookingMinutes: 20, servings: 2 };
 const recipe = { id: "pasta", title: proposal.dishName, servings: 2,
   ingredients: [{ id: "pasta", name: "Pasta", quantity: 200, unit: "g" }, { id: "paste", name: "Tomato paste", quantity: 30, unit: "g" }],
-  steps: [{ id: "boil", instruction: "Boil the pasta.", ingredientIds: ["pasta"] }, { id: "sauce", instruction: "Add the paste.", ingredientIds: ["paste"] }] };
+  steps: [{ id: "boil", headline: "Boil the pasta", instruction: "Boil the pasta.", ingredientIds: ["pasta"] }, { id: "sauce", headline: "Add the paste", instruction: "Add the paste.", ingredientIds: ["paste"] }] };
 class Provider implements LLMProvider {
   prompts: string[] = [];
   constructor(private outputs: (unknown | Error)[]) {}
@@ -41,8 +41,34 @@ function browser(service: WebCookingService) {
   };
 }
 
+it("refreshes speech handlers across reloads while retaining the current tomato step and guards", async (t) => {
+  const tomatoRecipe = { id: "tomatoes", title: proposal.dishName, servings: 2,
+    ingredients: [{ id: "tomatoes", name: "pomidory", quantity: 400, unit: "g" }],
+    steps: [{ id: "sauce", headline: "Dodaj pomidory", instruction: "Dodaj pomidory do czosnku i duś przez kilka minut.", ingredientIds: ["tomatoes"] }] };
+  const provider = new Provider([proposal, tomatoRecipe]);
+  const retained = new WebCookingService(() => provider);
+  const flow = await retained.execute(undefined, { action: "propose", ingredients: "pomidory", language: "pl" });
+  await retained.execute(flow.id, { action: "accept" });
+  const before = retained.read(flow.id);
+  t.mock.method(retained, "execute", async () => { throw new Error("Obsolete handlers must not be reused"); });
+  const refreshed = new WebCookingService(() => { throw new Error("A current-step query needs no provider"); }, retained);
+  for (const message of ["co teraz?", "powtórz"]) {
+    const response = await refreshed.execute(flow.id, { action: "adapt", message, expectedRevision: before.body.revision, requestId: message === "powtórz" ? "repeat" : "current" });
+    assert.equal(response.status, 200);
+    assert.match(response.body.speech!.text, /400 gramów/);
+    assert.equal(refreshed.speech(flow.id, response.body.speech!.id, response.body.revision!), response.body.speech!.text);
+    assert.deepEqual(response.body.state, before.body.state);
+    assert.equal(response.body.revision, before.body.revision);
+  }
+  assert.equal(provider.prompts.length, 2);
+  assert.equal((await refreshed.execute(flow.id, { action: "current", requestId: "repeat" })).status, 409);
+  assert.equal((await refreshed.execute(flow.id, { action: "current", expectedRevision: "stale" })).status, 409);
+  await refreshed.execute(flow.id, { action: "reset" });
+  assert.equal(retained.read(flow.id).status, 410);
+});
+
 it("completes the web flow with existing agent adaptation, authoritative snapshots and private cookies", async () => {
-  const provider = new Provider([proposal, recipe, { type: "ingredient_change", message: "Skip the paste and simmer the sauce.", originalIngredientId: "paste", replacement: null, reason: "Unavailable.", additionalIngredients: [], stepUpdates: [{ id: "sauce", instruction: "Simmer the sauce.", ingredientIds: [] }] }]);
+  const provider = new Provider([proposal, recipe, { type: "ingredient_change", message: "Skip the paste and simmer the sauce.", originalIngredientId: "paste", replacement: null, reason: "Unavailable.", additionalIngredients: [], stepUpdates: [{ id: "sauce", headline: "Simmer the sauce", instruction: "Simmer the sauce.", ingredientIds: [] }] }]);
   const ui = browser(new WebCookingService(() => provider));
   assert.equal((await ui.send()).body.state?.progress, null);
   const proposed = await ui.send({ action: "propose", ingredients: "pasta and tomato paste" });
@@ -176,14 +202,14 @@ it("client runtime imports contain no providers, server services or credential r
 it("returns one canonical 3-carrot ingredient after completed preparation and carries quantity history to the next adaptive request", async () => {
   const carrotRecipe = { id: "carrot-pasta", title: proposal.dishName, servings: 2,
     ingredients: [{ id: "carrot", name: "carrot", quantity: 1, unit: "piece" }],
-    steps: [{ id: "prep", instruction: "Dice 1 carrot.", ingredientIds: ["carrot"] },
-      { id: "pan", instruction: "Add 1 diced carrot.", ingredientIds: ["carrot"] },
-      { id: "serve", instruction: "Serve the carrot pasta.", ingredientIds: ["carrot"] }] };
+    steps: [{ id: "prep", headline: "Dice 1 carrot", instruction: "Dice 1 carrot.", ingredientIds: ["carrot"] },
+      { id: "pan", headline: "Add 1 diced carrot", instruction: "Add 1 diced carrot.", ingredientIds: ["carrot"] },
+      { id: "serve", headline: "Serve the carrot pasta", instruction: "Serve the carrot pasta.", ingredientIds: ["carrot"] }] };
   const provider = new Provider([proposal, carrotRecipe, { type: "ingredient_change", message: "Use 3 carrots in total.",
     originalIngredientId: "carrot", replacement: { id: "three-carrots", name: "carrot", quantity: 3, unit: "piece" },
     reason: "Requested total.", additionalIngredients: [], stepUpdates: [
-      { id: "pan", instruction: "Dice 2 more carrots and add all 3 carrots.", ingredientIds: ["three-carrots"] },
-      { id: "serve", instruction: "Serve the pasta with all 3 carrots.", ingredientIds: ["three-carrots"] },
+      { id: "pan", headline: "Dice the extra carrots", instruction: "Dice 2 more carrots and add all 3 carrots.", ingredientIds: ["three-carrots"] },
+      { id: "serve", headline: "Serve the pasta", instruction: "Serve the pasta with all 3 carrots.", ingredientIds: ["three-carrots"] },
     ] }, { type: "cooking_problem", message: "Use 3 carrots total, including the one already prepared.", additionalIngredients: [], stepUpdates: [] }]);
   const ui = browser(new WebCookingService(() => provider));
   await ui.send({ action: "propose", ingredients: "pasta and 1 carrot" });

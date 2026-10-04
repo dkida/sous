@@ -14,9 +14,9 @@ function makeRecipe(): Recipe {
       { id: "salt", name: "Salt", quantity: null, unit: null },
     ],
     steps: [
-      { id: "boil", instruction: "Boil the pasta in salted water.", ingredientIds: ["pasta", "salt"] },
-      { id: "sauce", instruction: "Heat the tomatoes.", ingredientIds: ["tomatoes"] },
-      { id: "combine", instruction: "Combine the pasta and sauce.", ingredientIds: ["pasta", "tomatoes"] },
+      { id: "boil", headline: "Boil the pasta", instruction: "Boil the pasta in salted water.", ingredientIds: ["pasta", "salt"] },
+      { id: "sauce", headline: "Heat the tomatoes", instruction: "Heat the tomatoes.", ingredientIds: ["tomatoes"] },
+      { id: "combine", headline: "Combine the pasta and sauce", instruction: "Combine the pasta and sauce.", ingredientIds: ["pasta", "tomatoes"] },
     ],
   };
 }

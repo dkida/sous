@@ -29,10 +29,10 @@ export function fixtureRecipe(): Recipe {
       { id: "oil", name: "Olive oil", quantity: 15, unit: "ml" },
       { id: "salt", name: "Salt", quantity: null, unit: null },
     ], steps: [
-      { id: "boil", instruction: "Boil 200 g pasta in salted water until al dente.", ingredientIds: ["pasta", "salt"] },
-      { id: "saute", instruction: "Heat 15 ml oil and sauté one chopped onion and two cloves of garlic until softened.", ingredientIds: ["oil", "onion", "garlic"] },
-      { id: "sauce", instruction: "Add chopped tomatoes and tomato paste to the pan and simmer until the sauce thickens.", ingredientIds: ["tomatoes", "paste"] },
-      { id: "serve", instruction: "Combine the cooked pasta and sauce, then top with 40 g parmesan.", ingredientIds: ["pasta", "tomatoes", "parmesan"] },
+      { id: "boil", headline: "Cook the pasta", instruction: "Boil 200 g pasta in salted water until al dente.", ingredientIds: ["pasta", "salt"] },
+      { id: "saute", headline: "Sauté onion and garlic", instruction: "Heat 15 ml oil and sauté one chopped onion and two cloves of garlic until softened.", ingredientIds: ["oil", "onion", "garlic"] },
+      { id: "sauce", headline: "Add chopped tomatoes", instruction: "Add chopped tomatoes and tomato paste to the pan and simmer until the sauce thickens.", ingredientIds: ["tomatoes", "paste"] },
+      { id: "serve", headline: "Combine pasta and sauce", instruction: "Combine the cooked pasta and sauce, then top with 40 g parmesan.", ingredientIds: ["pasta", "tomatoes", "parmesan"] },
     ] };
 }
 

@@ -29,9 +29,9 @@ describe("interaction timing", () => {
     const proposal = { dishName: "Rice", description: "Simple rice.", estimatedCookingMinutes: 15, servings: 2 };
     const recipe = { id: "rice", title: "Rice", servings: 2,
       ingredients: [{ id: "rice", name: "Rice", quantity: 200, unit: "g" }],
-      steps: [{ id: "cook", instruction: "Cook rice.", ingredientIds: ["rice"] }] };
+      steps: [{ id: "cook", headline: "Cook rice", instruction: "Cook rice.", ingredientIds: ["rice"] }] };
     const advice = { type: "cooking_problem", message: "Cook a little longer.", stepUpdates: [], additionalIngredients: [] };
-    const invalidOperation = { ...advice, stepUpdates: [{ id: "unknown", instruction: "Cook.", ingredientIds: [] }] };
+    const invalidOperation = { ...advice, stepUpdates: [{ id: "unknown", headline: "Cook", instruction: "Cook.", ingredientIds: [] }] };
     const failure = new Error("Fictional sensitive transport error");
     const outputs = [JSON.stringify(proposal), JSON.stringify(recipe), JSON.stringify(advice), "{broken", JSON.stringify(invalidOperation), failure];
     const timings: InteractionTiming[] = [];

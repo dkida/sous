@@ -6,21 +6,68 @@ import { VoiceTurn, transcribeRecording, type VoicePorts, type VoiceState } from
 import { voiceHandlers } from "./voice-http";
 import { cookingHandlers } from "./http";
 import type { CookingReply } from "./contracts";
+import type { Recipe } from "../domain/types";
+import type { Language } from "../shared/language";
 
 const proposal = { dishName: "Pasta", description: "Tomato pasta", estimatedCookingMinutes: 20, servings: 2 };
 const recipe = { id: "pasta", title: "Pasta", servings: 2,
   ingredients: [{ id: "pasta", name: "Pasta", quantity: 200, unit: "g" }, { id: "paste", name: "Tomato paste", quantity: 30, unit: "g" }],
-  steps: [{ id: "prep", instruction: "Prepare the paste.", ingredientIds: ["paste"] }, { id: "cook", instruction: "Add the paste.", ingredientIds: ["paste"] }] };
+  steps: [{ id: "prep", headline: "Prepare the paste", instruction: "Prepare the paste.", ingredientIds: ["paste"] }, { id: "cook", headline: "Add the paste", instruction: "Add the paste.", ingredientIds: ["paste"] }] };
 const omission = { type: "ingredient_change", message: "Skip the paste.", originalIngredientId: "paste", replacement: null, reason: "Unavailable", additionalIngredients: [],
-  stepUpdates: [{ id: "prep", instruction: "Prepare the pan.", ingredientIds: [] }, { id: "cook", instruction: "Simmer the sauce.", ingredientIds: [] }] };
-async function kitchen(outputs: unknown[] = []) {
+  stepUpdates: [{ id: "prep", headline: "Prepare the pan", instruction: "Prepare the pan.", ingredientIds: [] }, { id: "cook", headline: "Simmer the sauce", instruction: "Simmer the sauce.", ingredientIds: [] }] };
+async function kitchen(outputs: unknown[] = [], plan: Recipe = recipe, language: Language = "en") {
   const prompts: string[] = [];
-  const queue = [proposal, recipe, ...outputs];
+  const queue = [proposal, plan, ...outputs];
   const service = new WebCookingService(() => ({ async generate(prompt) { prompts.push(prompt); const next = queue.shift(); if (!next) throw new Error("Unexpected inference"); return JSON.stringify(next); } }));
-  const flow = await service.execute(undefined, { action: "propose", ingredients: "pasta and tomato paste" });
+  const flow = await service.execute(undefined, { action: "propose", ingredients: "pasta and tomato paste", language });
   await service.execute(flow.id, { action: "accept" });
   return { service, id: flow.id!, prompts };
 }
+
+for (const language of ["pl", "en"] as const) {
+  for (const embedded of [true, false]) {
+    it(`speaks the next ${language} tomato instruction after adaptive completion (${embedded ? "embedded" : "structured"} quantity)`, async () => {
+      const message = language === "pl" ? "Dodałem cebulę i czosnek." : "I have added the onion and garlic.";
+      const acknowledgement = language === "pl" ? "Krok z dodaniem cebuli i czosnku został ukończony. Przechodzimy do pomidorów." : "The onion and garlic step is complete. Let's move on to the tomatoes.";
+      const instruction = language === "pl"
+        ? `Wrzuć na patelnię ${embedded ? "250 g pomidorów koktajlowych" : "pomidory koktajlowe"} i smaż wszystko razem przez około 4 minuty, od czasu do czasu mieszając, aż pomidory zaczną pękać i puszczać sok.`
+        : `Add ${embedded ? "250 g cherry tomatoes" : "the cherry tomatoes"} to the pan and fry together for about 4 minutes, stirring occasionally until the tomatoes burst and release their juices.`;
+      const plan: Recipe = { id: "pasta", title: proposal.dishName, servings: 2,
+        ingredients: [{ id: "onion", name: "onion", quantity: 1, unit: "piece" }, { id: "garlic", name: "garlic", quantity: 2, unit: "cloves" },
+          { id: "tomatoes", name: language === "pl" ? "pomidory koktajlowe" : "cherry tomatoes", quantity: 250, unit: "g" }],
+        steps: [{ id: "prep", headline: "Add onion and garlic", instruction: "Add the onion and garlic to the pan.", ingredientIds: ["onion", "garlic"] },
+          { id: "cook", headline: language === "pl" ? "Dodaj pomidory" : "Add the tomatoes", instruction, ingredientIds: ["tomatoes"] }] };
+      const action = { type: "reconcile_progress", message: acknowledgement, completedSteps: [{ stepId: "prep", evidence: message }] };
+      const context = await kitchen([action], plan, language);
+      const turn = harness(context.service, context.id, message, { language });
+      turn.turn.start(); await turn.turn.finish();
+      assert.equal(turn.states.at(-1), "idle");
+      assert.equal(turn.spoken.length, 1);
+      assert.ok(turn.spoken[0]!.startsWith(acknowledgement));
+      assert.ok(turn.spoken[0]!.includes(instruction));
+      assert.equal(turn.spoken[0]!.match(/250/g)?.length, 1);
+      if (!embedded) assert.match(turn.spoken[0]!, language === "pl" ? /250 gramów/ : /250 grams/);
+      assert.equal(context.service.read(context.id).body.state?.progress?.currentStep?.id, "cook");
+      assert.deepEqual(context.service.read(context.id).body.state?.progress?.session.completedStepIds, ["prep"]);
+      const repeated = harness(context.service, context.id, language === "pl" ? "powtórz" : "repeat", { language });
+      repeated.turn.start(); await repeated.turn.finish();
+      assert.ok(repeated.spoken[0]!.startsWith(instruction));
+      assert.equal(repeated.spoken[0]!.match(/250/g)?.length, 1);
+      assert.equal(context.prompts.length, 3); // Reconciliation reasons once; repeat bypasses inference.
+    });
+  }
+}
+
+it("adaptive completion of the final step speaks completion without rereading a finished step", async () => {
+  const message = "I prepared the paste and added it.";
+  const acknowledgement = "The paste is prepared and added.";
+  const context = await kitchen([{ type: "reconcile_progress", message: acknowledgement,
+    completedSteps: [{ stepId: "prep", evidence: message }, { stepId: "cook", evidence: message }] }]);
+  const voice = harness(context.service, context.id, message);
+  voice.turn.start(); await voice.turn.finish();
+  assert.deepEqual(voice.spoken, [`${acknowledgement} All steps are complete. Enjoy your meal!`]);
+  assert.equal(context.service.read(context.id).body.state?.progress?.session.status, "completed");
+});
 function request(id: string, body?: unknown, origin = "http://localhost:3000") {
   return new NextRequest("http://localhost:3000/api/voice", { method: "POST", headers: { cookie: `sous-session=${id}`, origin, "Content-Type": "application/json" }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
 }
@@ -174,13 +221,13 @@ it("microphone denial returns error with unchanged session and no raw diagnostic
 
 it("typed and voiced next/repeat/current/done remain deterministic and completion is spoken", async () => {
   const context = await kitchen();
-  for (const message of ["Next.", "repeat", "show current step", "what do I do next?"]) {
+  for (const message of ["Next.", "what now?", "repeat", "show current step", "what do I do next?"]) {
     const voice = harness(context.service, context.id, message); voice.turn.start(); await voice.turn.finish();
-    assert.deepEqual(voice.spoken, ["Prepare the paste."]);
+    assert.deepEqual(voice.spoken, ["Prepare the paste. For this step: 30 grams Tomato paste."]);
     assert.equal(context.service.read(context.id).body.state?.progress?.currentStep?.id, "prep");
   }
   const voice = harness(context.service, context.id, "Done!"); voice.turn.start(); await voice.turn.finish();
-  assert.deepEqual(voice.spoken, ["Add the paste."]);
+  assert.deepEqual(voice.spoken, ["Add the paste. For this step: 30 grams Tomato paste."]);
   const last = harness(context.service, context.id, "done"); last.turn.start(); await last.turn.finish();
   assert.deepEqual(last.spoken, ["All steps are complete. Enjoy your meal!"]);
   assert.equal(context.prompts.length, 2);

@@ -16,7 +16,7 @@ import type { Language } from "../shared/language";
 const proposal = { dishName: "Marchew na patelni", description: "Prosta marchew z odrobiną oliwy.", estimatedCookingMinutes: 10, servings: 1 };
 const recipe = { id: "carrot-pan", title: proposal.dishName, servings: 1,
   ingredients: [{ id: "carrot", name: "marchew", quantity: 1, unit: "piece" }],
-  steps: [{ id: "cut", instruction: "Pokrój marchew.", ingredientIds: ["carrot"] }, { id: "fry", instruction: "Usmaż marchew i podaj.", ingredientIds: ["carrot"] }] };
+  steps: [{ id: "cut", headline: "Pokrój marchew", instruction: "Pokrój marchew.", ingredientIds: ["carrot"] }, { id: "fry", headline: "Usmaż marchew i podaj", instruction: "Usmaż marchew i podaj.", ingredientIds: ["carrot"] }] };
 function fixture(outputs: unknown[] = [proposal, recipe]) {
   const prompts: string[] = [];
   const service = new WebCookingService(() => ({ async generate(prompt) { prompts.push(prompt); return JSON.stringify(outputs.shift()); } }));
@@ -52,7 +52,7 @@ it("English remains the default rendered UI and Polish renders the translated en
 it("Polish proposal, recipe and clarification follow-up request Polish output in the same agent context", async () => {
   const clarification = { type: "clarification", message: "Czy chcesz użyć trzech marchewek?" };
   const changed = { type: "ingredient_change", message: "Użyj trzech marchewek.", originalIngredientId: "carrot", replacement: { ...recipe.ingredients[0], quantity: 3 }, reason: "Większa porcja.", stepUpdates: [
-    { ...recipe.steps[0], instruction: "Pokrój trzy marchewki." }, { ...recipe.steps[1], instruction: "Usmaż trzy marchewki i podaj." },
+    { ...recipe.steps[0], headline: "Pokrój trzy marchewki", instruction: "Pokrój trzy marchewki." }, { ...recipe.steps[1], headline: "Usmaż trzy marchewki i podaj", instruction: "Usmaż trzy marchewki i podaj." },
   ], additionalIngredients: [] };
   const { service, prompts } = fixture([proposal, recipe, clarification, changed]);
   const started = await start(service);
@@ -152,7 +152,7 @@ it("TTS uses Flash's supported Polish language code and trusts the session, not 
   }));
   assert.equal(response.status, 200);
   await response.text();
-  assert.deepEqual(calls, [{ text: "Pokrój marchew.", model_id: "eleven_flash_v2_5", language_code: "pl" }]);
+  assert.deepEqual(calls, [{ text: "Pokrój marchew. Do tego kroku: marchew, 1 sztuka.", model_id: "eleven_flash_v2_5", language_code: "pl" }]);
 });
 
 it("Polish voice failures remain Polish while preserving the same cancellation state machine", async () => {

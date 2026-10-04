@@ -1,4 +1,4 @@
-import { hasOnlyKeys, isNonEmptyString, isRecord, validateRecipe } from "./recipe-validation";
+import { hasOnlyKeys, isNonEmptyString, isRecord, isStepHeadline, validateRecipe } from "./recipe-validation";
 import type { Ingredient, RecipeStep } from "./types";
 
 export interface RemainingPlanChanges {
@@ -64,7 +64,7 @@ export function validateAdaptiveAction(value: unknown): AdaptiveAction {
 function validIngredient(value: unknown): boolean {
   try {
     validateRecipe({ id: "validation", title: "Validation", servings: 1,
-      ingredients: [value], steps: [{ id: "validation", instruction: "Validate", ingredientIds: [] }] });
+      ingredients: [value], steps: [{ id: "validation", headline: "Validate", instruction: "Validate", ingredientIds: [] }] });
     return true;
   } catch { return false; }
 }
@@ -73,8 +73,8 @@ function validatePlan(value: Record<string, unknown>): void {
   if (!Array.isArray(value.additionalIngredients) || !value.additionalIngredients.every(validIngredient) ||
       !Array.isArray(value.stepUpdates)) invalid();
   for (const step of value.stepUpdates) {
-    if (!isRecord(step) || !hasOnlyKeys(step, ["id", "instruction", "ingredientIds"]) ||
-        !isNonEmptyString(step.id) || !isNonEmptyString(step.instruction) ||
+    if (!isRecord(step) || !hasOnlyKeys(step, ["id", "headline", "instruction", "ingredientIds"]) ||
+        !isNonEmptyString(step.id) || !isStepHeadline(step.headline) || !isNonEmptyString(step.instruction) ||
         !Array.isArray(step.ingredientIds) || !step.ingredientIds.every(isNonEmptyString) ||
         new Set(step.ingredientIds).size !== step.ingredientIds.length) invalid();
   }
