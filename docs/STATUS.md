@@ -15,12 +15,295 @@ quantity and mobile interaction refinements are complete. The preview retains
 the active cooking session. English remains the public demo default. Task 6
 Phase 1 is complete with a **NO-GO** decision for wake-word implementation in this
 milestone; Phase 2 was not started. Push-to-talk remains available.
+[Task 6.2](TASK6-2.md) (recipe quality and pantry awareness) was found specified
+but never implemented; it was implemented on 2026-10-05 as the last product
+change before deployment. See the section below. **Mistral Small 4
+(`mistral-small-2603`) is now the default production reasoning model**; Gemma is
+no longer the default.
 
 Latest verification on 2026-10-05: **212 tests passed**, typecheck, isolated
 production webpack build and whitespace checks passed. Responsive cooking was
 verified at 390 × 844, 430 × 932 and 360 × 800, including simulated keyboard space
 and all voice state layouts. Physical phone/Safari, microphone and noisy-kitchen
-checks remain pending as detailed below. Task 7 has not been started.
+checks remain pending as detailed below. Task 7 release preparation is now in progress;
+public deployment and human release gates are not yet verified.
+
+## Production reasoning provider — Mistral Small 4 (2026-10-05)
+
+**Final configuration**:
+- **Provider and model:** `LLM_PROVIDER` defaults to `mistral` and `LLM_MODEL`
+  to `mistral-small-2603` (Mistral Small 4, Apache 2.0 open weights, Mistral's
+  hosted chat-completions API).
+- **Settings:** temperature 0.2, 8192 max tokens, 120 s timeout, default
+  reasoning behaviour.
+- **Credential:** `MISTRAL_API_KEY`, server-side only.
+- **Render:** `render.yaml` sets the same provider and model explicitly and
+  prompts for `MISTRAL_API_KEY` and `ELEVENLABS_API_KEY`. `GEMINI_API_KEY` is no
+  longer declared or needed.
+- **Not yet verified:** the live Render deployment itself.
+
+**Native JSON Schema in production**:
+- `LLMProvider.generate(prompt, contract?)` gained an optional contract
+  argument.
+- `CookingAgent` passes `responseContracts.proposal`, `.recipe` or `.adaptive`
+  with every request. These are the existing native schemas, unchanged in
+  strictness.
+- Mistral sends the contract as
+  `response_format: {type: "json_schema", json_schema: {name, schema, strict: true}}`.
+- Production Mistral never uses prompt-only mode. Responses are still parsed and
+  checked by the unchanged Sous validators and domain rules.
+- Gemma and Flash-Lite ignore the contract and keep prompted JSON.
+
+**Alternates**:
+- Gemma 4 and Gemini Flash-Lite stay implemented but non-default, selectable
+  only with `LLM_PROVIDER=gemma` or `gemini-flash-lite` plus `GEMINI_API_KEY`.
+- A leftover `GEMMA_MODEL` no longer changes the default.
+- There is no automatic fallback.
+- Gemma was not removed, because benchmarks, tests and the alternate path use
+  it, so removal would not be trivial.
+- Historical Gemma and Flash-Lite benchmark results are unchanged.
+
+**Benchmark harness**:
+- `mistral-native-schema` is now exactly the production provider.
+- `mistral` keeps its recorded meaning: prompt-only, via a wrapper that drops
+  the contract.
+- Shared setup lives in `src/benchmark/providers.ts`.
+
+**Verification**: 253 tests pass.
+- **New or updated tests:**
+  - The default resolves to Mistral and `mistral-small-2603`.
+  - Only `MISTRAL_API_KEY` is needed; Gemini/Gemma credentials are not.
+  - Model IDs must be pinned.
+  - A default-configured agent sends the `dish_proposal`, `recipe` and
+    `adaptive_action` schemas, in that order.
+  - The CLI default path runs end to end through a mocked Mistral endpoint that
+    requires a strict schema on every request.
+  - The client import graph may not reference `MISTRAL_API_KEY` or the Mistral
+    API host.
+- **Checks:** typecheck and `git diff --check` pass.
+- **Production build:** the webpack build passes in a disposable copy without
+  `.env` files, built with a sentinel `MISTRAL_API_KEY`. `.next/static` contains
+  no sentinel value, `MISTRAL_API_KEY`, Mistral API host, model ID,
+  `GEMINI_API_KEY` or `ELEVENLABS_API_KEY`. The sentinel value appears nowhere
+  in the build output, and the Mistral API host appears only in the server
+  bundle.
+- No live model calls were made.
+
+`PROJECT.md` now names Mistral Small 4 as the reasoning model and in the stack.
+
+## Task 6.2 — Recipe quality & pantry awareness
+
+Implemented 2026-10-05. Before this, `docs/TASK6-2.md` existed only as an
+untracked specification: no commit, branch, stash or worktree contained an
+implementation.
+
+**Availability model**, centralized in `src/domain/pantry.ts`:
+- Ingredients the cook says they have are available but not mandatory.
+- The only assumed staples are water, salt, black pepper, and one cooking oil
+  (neutral or olive). English and Polish base names are recognized.
+- Everything else, including onion, garlic, butter, herbs, cheese, stock, tomato
+  paste, purée, passata and other spices, is unavailable until the cook
+  confirms it.
+
+**Contracts**:
+- `DishProposal` gained `assumedStaples` (must be policy staples, at most 4),
+  `optionalAdditions` (at most 3; "better if you have", never part of the plan)
+  and `shoppingAdditions` (at most 3; only when the cook offers to shop). Lists
+  may not overlap, and additions may not be staples. All three default to empty
+  lists, so older proposal shapes stay valid.
+- Recipe validation now rejects any step whose text uses salt, black pepper or
+  cooking oil without referencing a matching structured ingredient. Matching is
+  whole-word in English and Polish, so "salted water", "bell pepper" and "boil"
+  do not count. Water is assumed but not enforced, because pasta water and
+  similar unmeasured uses need no structured ingredient. The rule applies at
+  generation and after every adaptation.
+- A generated recipe may not contain one of the proposal's optional additions
+  (exact-name guard).
+- Adaptive `ingredient_change`, `scale_servings` and `cooking_problem` actions
+  may carry `ingredientAvailability`: one entry per introduced ingredient (a new
+  substitute or an additional ingredient), with basis either `assumed_staple`
+  (the name must be in the policy) or `cook_confirmed` (the evidence must quote
+  the cook's own words). The agent keeps the cook's statements — the original
+  ingredient list plus every adaptive message — and rejects any action that
+  introduces an unconfirmed ingredient. State is left untouched. A same-name
+  quantity correction or an omission (`replacement: null`) needs no entry. The
+  quote is checked as an exact substring; whether it really refers to that
+  ingredient is not machine-verified.
+- The native response schemas mirror these fields.
+
+**Prompts**: one shared availability block is used by the proposal, recipe and
+adaptive prompts.
+- Proposal: plan a sensible dish rather than combine everything; keep sparse
+  ingredients simple; the dish must be cookable without unconfirmed additions;
+  shopping only when the cook offers.
+- Recipe: only available, staple and shopping ingredients; every staple used is
+  structured and referenced; technique guidance ("examples, not a checklist:
+  keep simple food simple"); prose quantities must agree with structured ones,
+  including per-portion splits.
+- Adaptive: the context now includes `cookStatements`, `assumedStaples` and
+  `unconfirmedSuggestions`; when an ingredient is missing, prefer omission, then
+  available ingredients or staples, then asking.
+- No food-specific rules were added.
+
+**UI and CLI**: the existing proposal view and the CLI list assumed staples,
+optional additions and purchases, with English and Polish labels. This was not
+visually checked, because rendering a proposal needs a live model call. Voice
+formatting is unchanged and reads the structured staples.
+
+**Tests**: 252 pass (238 before, plus 14 Task 6.2 tests in
+`src/application/pantry-awareness.test.ts`). Existing fixtures that added
+ingredients now state their availability.
+- Typecheck passes.
+- A secret-free production webpack build in a disposable copy passes.
+- `git diff --check` passes.
+- No live model calls were made.
+
+**Scenario runner**: `npm run bench:quality -- --provider <name> --output
+<file>` runs scenarios A–E (pasta/cream, plus banana, eggs and bread, shopping
+allowed, Polish) and the missing-paste and burning-onion checks. That is at most
+12 requests. I dry-ran it offline with networking disabled; the owner then ran
+it live (see below).
+
+**Live quality check** (owner-run, Mistral Small 4 with native schema, one
+sample each, 12 requests; [review](benchmarks/2026-10-05-task62-quality/REVIEW.md)):
+- 11 of 12 responses were accepted; 6 of 7 scenario flows completed.
+- The banana was omitted, eggs and bread stayed simple, and shopping produced 2
+  purchases.
+- Missing tomato paste was handled by omission (no invented purée), and burning
+  onions by heat control (no invented second onion).
+- The Polish recipe was rejected because it seasoned with black pepper that was
+  not a structured ingredient. That is the staple rule working as intended.
+- Minor issues: "ice water" for blanching, and optional extra parmesan beyond
+  the stored total.
+- Other providers were not run.
+
+**Remaining from the specification**:
+- The live check above is a single-sample smoke test, not the full evaluation;
+  Polish recipe generation was not accepted in it.
+- Shopping intent is left to the model; nothing deterministic detects it.
+- Whether a recipe uses only the cook's ingredients is not machine-checked,
+  because free-text ingredient lists can't be matched reliably. Only staple
+  references, optional-addition names and adaptive additions are enforced.
+- Spec test "voice ingredient input reaches the same planning behavior" is
+  covered by the existing path (voice transcript → same `proposeDish`), not by
+  a new test.
+
+## Task 7 — Feature freeze / release preparation
+
+Started 2026-10-05. No UI, cooking semantics, provider architecture, voice or
+language features changed. No later feature milestone started.
+
+**Source discrepancy, resolved 2026-10-05:** Task 6.2 had been specified but
+never implemented. It was implemented as the last product change before
+deployment (see the Task 6.2 section above); its live qualitative evaluation is
+pending.
+
+Production audit preceded changes; see [audit and runbook](release/DEPLOYMENT.md).
+The app needs a Render Node web service, one process/instance, server-only provider
+keys and public HTTPS. Session cookies are Secure in production, HttpOnly and
+SameSite=Strict. In-memory flows are lost on restart/redeploy; multiple workers
+cannot share them. Free idle sleep would also lose them.
+
+Prepared [render.yaml](../render.yaml): one Starter instance, pinned Node 22.18.0,
+manual deploys, npm clean install / webpack build, PORT binding, root health check,
+secret prompts. Starter billing choice remains pending. Health checks establish
+reachability, not provider function. [Environment template](../.env.example)
+contains names and empty placeholders only; local secret files were not changed.
+
+**Provider truth (superseded 2026-10-05):** Mistral Small 4 is now the default
+and the Blueprint setting; see "Production reasoning provider" above. Earlier
+note: local config has key names present but no model/provider selectors;
+application default was then Gemma gemma-4-26b-a4b-it. Prior STATUS
+records interactive Flash-Lite checks. The Blueprint then selected
+gemini-flash-lite / gemini-3.5-flash-lite for public-demo latency; no Render
+runtime selection has been verified. Gemma remains supported behind LLMProvider;
+ElevenLabs Scribe v2 / Flash v2.5 and EN/PL remain intact.
+
+Prepared the external-reader [README](../README.md),
+[demo scenario and 60–120 second recording outline](release/DEMO.md),
+[submission draft](release/SUBMISSION.md), and
+[exact phone/Natalia handoff](release/HUMAN-CHECKS.md).
+Final public screenshots are pending; previous local screenshots are not
+relabeled as public release evidence. No video or Natalia result is fabricated.
+
+**Deployment blocker:** no Render CLI/token or accessible signed-in session.
+The dashboard opens at Sign In to Render. No public service/URL has been supplied
+or created; no paid instance was purchased. Access and completed source location
+were requested. The public HTTPS walkthrough, cookies, browser isolation,
+restart recovery, live EN/PL voice, microphone and actual speaker checks remain
+unverified. Physical phone/Safari/Android and Natalia observations remain pending.
+Task 7 is **not complete** and the release gate remains open.
+
+Final automated checks on the current checkout: **228 tests passed**, 0 failed,
+0 skipped (212/212 also passed before concurrent benchmark additions and after
+fresh installation); `npm ci --include=dev` passed
+with 0 reported vulnerabilities; `npm run typecheck`, secret-free production
+`npm run build -- --webpack`, `git diff --check`, release whitespace/link checks
+and the existing client-boundary test passed. Production browser JS contained no
+provider/credential configuration identifiers or model IDs. Approved execution
+resolved sandbox subprocess EPERM for the two CLI tests and npm binary install
+check. No live providers were used. The build/install ran in a disposable copy
+without environment files; the preview/session was not rebuilt/reset.
+Concurrent external Mistral benchmark-only additions were preserved; they are not
+Task 7 feature work or part of app provider selection. Final tests/typecheck/build
+were repeated on the current source; the source remained stable during those
+checks. Mistral benchmark credentials are not required for Render cooking/voice.
+Full evidence and pending public gates: [release verification](release/VERIFICATION.md).
+
+## Mistral open-weight benchmark spike (2026-10-05)
+
+- Narrow spike, not a migration or Task 7 feature. Added `MistralProvider` behind
+  the unchanged `LLMProvider.generate(prompt)` boundary, defaulting to the pinned
+  Apache 2.0 open-weight Mistral Small 4 (`mistral-small-2603`) on Mistral's hosted
+  chat-completions API. Settings match the Task 3.6 baseline: temperature 0.2,
+  8192 max output tokens, 120-second timeout, prompted JSON, default reasoning
+  behaviour; reasoning chunks are discarded and errors are sanitized.
+- Benchmark-only: `selectProvider`, the web app and the CLI cannot select Mistral.
+  `npm run bench:inference` gained an opt-in `--providers` list (default remains
+  `gemma,gemini-flash-lite`) and reads `MISTRAL_API_KEY` / `BENCH_MISTRAL_MODEL`.
+- Every current scenario prompt hash differs from the 2026-10-04 records (prompts
+  were refined after Task 3.6), so Mistral results are only comparable with
+  baselines re-run in the same benchmark.
+- `npm test` — all 228 tests passed (212 previous plus 16 new, mocked HTTP only).
+  `npm run typecheck` passed.
+- Live run: 45 sequential requests (3 repetitions × 5 scenarios × Gemma 4,
+  Flash-Lite and Mistral Small 4), one prompt hash per scenario, with no
+  access or quota failures. Successes: Gemma 13/15 (two 120 s timeouts),
+  Flash-Lite 14/15, Mistral 10/15 (recipe 1/3, missing paste 1/3, burning 2/3).
+  Mistral's median latency was 0.5–1.4 s for proposals and adaptive turns and
+  4.1 s for one valid recipe, against 10–88 s for Gemma. Every failure was
+  rejected atomically, leaving state and history unchanged.
+- Post-run diagnostics traced Mistral's recipe and missing-paste failures to a
+  recurring omission of the required step `ingredientIds` field. Not reliable
+  enough as-is; native JSON schema was not tested. No winner was selected and
+  no provider default changed. See
+  [the spike report](benchmarks/2026-10-05-mistral/REPORT.md).
+- **Final model experiment before release: native-schema Mistral.** Exactly 15
+  new Mistral Small 4 requests, and no other model was called. The only change was
+  Mistral's strict native JSON Schema (`response_format: json_schema`). The
+  schemas mirror the existing proposal, recipe and full adaptive-action-union
+  validators, keeping every required field including step `ingredientIds`. Sous
+  parsing, validation and domain rules are unchanged and still run afterwards.
+  Prompt hashes are identical to the prompt-only run.
+- Result: **12/15 accepted, 11/15 also passing the state-transition check**,
+  against 10/15 for prompt-only. The `ingredientIds` omission was eliminated:
+  0 of 15 responses omitted it, and recipes went from 1/3 to 3/3.
+  - Remaining failures: three domain-applicability rejections (an unreferenced
+    added ingredient, and a duplicate added "Onion" twice) and one scaling
+    response that left unused parmesan unscaled.
+  - Semantic review of every response found invented ingredient availability in
+    6/6 missing-paste and burning-onion responses: unlisted tomato purée as a
+    substitute, and assuming a second onion is available.
+  - 2/3 recipes say "N g parmesan over each serving" against an N g stored
+    total, which contradicts structured state.
+  - Latency: 0.6–4.0 s medians, with all failed trials included.
+- **Recommendation B:** Mistral Small 4 remains unsuitable, and model
+  experimentation stops for this release. No production default, prompt or
+  domain rule changed; the provider decision is left to the owner.
+- Native-schema verification: `npm test` passed all 238 tests (10 new: schema
+  vs validator agreement, provider schema request, rejected-text recording).
+  Typecheck, the production build and `git diff --check` passed. None of
+  these makes live inference calls.
 
 ## Mobile cooking interaction refinement before Task 7
 
@@ -933,7 +1216,7 @@ The following checks passed after Step 2 implementation:
   actions remain reachable in the bottom dock. Browser viewport emulation was
   tested, not physical devices, native keyboards or assistive technologies.
 - Production cookies require HTTPS outside trustworthy localhost contexts.
-  Deployment and multi-instance hosting are outside this milestone.
+  Task 7 public deployment is pending; multi-instance hosting remains unsupported.
 - Timer scheduling is not implemented.
 - Voice requires local ElevenLabs configuration. The configured account’s browser
   STT/TTS path has been verified with synthesized input; physical-device validation
@@ -941,8 +1224,8 @@ The following checks passed after Step 2 implementation:
   Batch STT waits for recording completion; short TTS MP3s are buffered before
   playback. Provider CORS/quota/accuracy and browser microphone/autoplay policies
   can affect availability and latency. Hiding the page cancels local voice work.
-  Voice operates during active cooking; initial ingredients/proposal acceptance
-  retain their existing text/button flow. See [VOICE.md](VOICE.md).
+  Voice also supports initial ingredients as an editable draft; proposal acceptance
+  retains its button flow. See [VOICE.md](VOICE.md).
 - Gemma JSON generation is prompted, not guaranteed by server-side constrained
   decoding. Runtime validation rejects malformed/incompatible responses;
   the user can retry. No automatic retries are implemented.
@@ -972,7 +1255,7 @@ The following checks passed after Step 2 implementation:
 
 - Timer scheduling and unrestricted model-directed state replacement.
 - Wake-word/hands-free implementation after the Task 6 NO-GO; background listening.
-- Database, authentication and deployment.
+- Database and authentication. Deployment is the current Task 7 release work.
 
 ## Remaining Task 5 verification
 

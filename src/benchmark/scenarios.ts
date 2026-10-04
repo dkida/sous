@@ -8,12 +8,14 @@ import { InvalidRecipeError } from "../domain/recipe-validation";
 import type { CookingSession, Recipe } from "../domain/types";
 import { GemmaProviderError } from "../infrastructure/gemma-provider";
 import { GeminiFlashLiteProviderError } from "../infrastructure/gemini-flash-lite-provider";
+import { MistralProviderError } from "../infrastructure/mistral-provider";
 
 export const scenarios = ["proposal", "recipe", "missing-paste", "scale-2-to-4", "burning-onions"] as const;
 export type Scenario = typeof scenarios[number];
 export const ingredientsInput = "I have pasta, onion, garlic, canned tomatoes, tomato paste and parmesan. Make two servings of tomato pasta.";
 export const acceptedProposal: DishProposal = {
   dishName: "Tomato Parmesan Pasta", description: "Pasta with tomato sauce and parmesan.", estimatedCookingMinutes: 25, servings: 2,
+  assumedStaples: ["salt", "olive oil"], optionalAdditions: [], shoppingAdditions: [],
 };
 
 /** Controlled context, independent of either model's generated recipe. */
@@ -53,33 +55,37 @@ export interface ScenarioResult {
   culinaryAssessment: "requires manual review" | "no output";
   // Validated cooking output for qualitative review; never a prompt or HTTP diagnostic.
   output: DishProposal | Recipe | AdaptiveCookingResult["action"] | null;
+  // Raw model text of a rejected response, so structural failures can be explained without extra calls.
+  rejectedModelText: string | null;
 }
 
 export async function runScenario(scenario: Scenario, provider: LLMProvider): Promise<ScenarioResult> {
   const store = new CookingSessionStore();
   const sessionId = "benchmark-session";
+  // Every non-proposal trial starts from the same accepted proposal, so the agent also knows what the cook said they have.
+  let seedingProposal = scenario !== "proposal";
+  let timing: InteractionTiming | undefined;
+  let promptHash = "";
+  let modelText: string | null = null;
+  const trackingProvider: LLMProvider = { generate: async (prompt, contract) => {
+    if (seedingProposal) {
+      seedingProposal = false;
+      return JSON.stringify(acceptedProposal);
+    }
+    promptHash = createHash("sha256").update(prompt).digest("hex");
+    return modelText = await provider.generate(prompt, contract);
+  } };
+  const agent = new CookingAgent(trackingProvider, store, sessionId, (measurement) => {
+    if (promptHash) timing = measurement;
+  });
+  // Seed the same accepted proposal without making an API call or recording it as a trial.
+  if (scenario !== "proposal") await agent.proposeDish(ingredientsInput);
   if (scenario !== "proposal" && scenario !== "recipe") {
     store.createSession(sessionId, fixtureRecipe());
     store.startSession(sessionId);
     store.completeCurrentStep(sessionId, "boil");
     if (scenario !== "burning-onions") store.completeCurrentStep(sessionId, "saute");
   }
-  let seedingProposal = scenario === "recipe";
-  let timing: InteractionTiming | undefined;
-  let promptHash = "";
-  const trackingProvider: LLMProvider = { generate: async (prompt) => {
-    if (seedingProposal) {
-      seedingProposal = false;
-      return JSON.stringify(acceptedProposal);
-    }
-    promptHash = createHash("sha256").update(prompt).digest("hex");
-    return provider.generate(prompt);
-  } };
-  const agent = new CookingAgent(trackingProvider, store, sessionId, (measurement) => {
-    if (promptHash) timing = measurement;
-  });
-  // Seed the same accepted proposal without making an API call or recording it as a trial.
-  if (scenario === "recipe") await agent.proposeDish(ingredientsInput);
   const before = store.getSession(sessionId);
   let result: DishProposal | CookingProgress | AdaptiveCookingResult | undefined;
   let failureKind: string | null = null;
@@ -98,17 +104,17 @@ export async function runScenario(scenario: Scenario, provider: LLMProvider): Pr
     correctStateTransition: result ? transitionMatches(scenario, before, after, result)
       : JSON.stringify(before) === JSON.stringify(after),
     completedHistoryPreserved: historyPreserved(before, after),
-    culinaryAssessment: output ? "requires manual review" : "no output", output };
+    culinaryAssessment: output ? "requires manual review" : "no output", output, rejectedModelText: result ? null : modelText };
 }
 
 function classifyFailure(error: unknown): string {
-  if (error instanceof GemmaProviderError || error instanceof GeminiFlashLiteProviderError) {
+  if (error instanceof GemmaProviderError || error instanceof GeminiFlashLiteProviderError || error instanceof MistralProviderError) {
     const status = /HTTP (\d{3})/.exec(error.message)?.[1];
     return status ? `http-${status}` : /timed out/.test(error.message) ? "timeout" : "provider-error";
   }
   if (error instanceof InvalidAdaptiveActionError) return "invalid-action";
   if (error instanceof InvalidRecipeError) return "invalid-recipe";
-  if (error instanceof CookingAgentError) return "invalid-model-output";
+  if (error instanceof CookingAgentError) return /malformed JSON/.test(error.message) ? "malformed-json" : "invalid-model-output";
   return "unexpected-error";
 }
 

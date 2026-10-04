@@ -7,6 +7,7 @@ import type { LLMProvider } from "./llm-provider";
 
 const proposal: DishProposal = {
   dishName: "Tomato Parmesan Pasta", description: "Simple tomato pasta.", estimatedCookingMinutes: 25, servings: 2,
+  assumedStaples: ["salt"], optionalAdditions: [], shoppingAdditions: [],
 };
 
 function makeRecipe(): Recipe {

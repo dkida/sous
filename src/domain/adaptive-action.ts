@@ -1,9 +1,12 @@
 import { hasOnlyKeys, isNonEmptyString, isRecord, isStepHeadline, validateRecipe } from "./recipe-validation";
+import type { IngredientAvailability } from "./pantry";
 import type { Ingredient, RecipeStep } from "./types";
 
 export interface RemainingPlanChanges {
   stepUpdates: RecipeStep[];
   additionalIngredients: Ingredient[];
+  /** One entry per ingredient the change introduces; checked against the cook's statements by the agent. */
+  ingredientAvailability?: IngredientAvailability[];
 }
 
 export type AdaptiveAction =
@@ -25,7 +28,7 @@ function invalid(): never {
 export function validateAdaptiveAction(value: unknown): AdaptiveAction {
   if (!isRecord(value) || !isNonEmptyString(value.message)) invalid();
   const common = ["type", "message"];
-  const plan = ["stepUpdates", "additionalIngredients"];
+  const plan = ["stepUpdates", "additionalIngredients", "ingredientAvailability"];
   switch (value.type) {
     case "clarification":
       if (!hasOnlyKeys(value, common)) invalid();
@@ -80,4 +83,11 @@ function validatePlan(value: Record<string, unknown>): void {
   }
   if (new Set(value.stepUpdates.map((step) => step.id)).size !== value.stepUpdates.length ||
       new Set(value.additionalIngredients.map((ingredient) => ingredient.id)).size !== value.additionalIngredients.length) invalid();
+  if (value.ingredientAvailability === undefined) return;
+  if (!Array.isArray(value.ingredientAvailability)) invalid();
+  for (const entry of value.ingredientAvailability) {
+    if (!isRecord(entry) || !hasOnlyKeys(entry, ["ingredientId", "basis", "evidence"]) || !isNonEmptyString(entry.ingredientId) ||
+        !(entry.basis === "assumed_staple" ? entry.evidence === null : entry.basis === "cook_confirmed" && isNonEmptyString(entry.evidence))) invalid();
+  }
+  if (new Set(value.ingredientAvailability.map((entry) => entry.ingredientId)).size !== value.ingredientAvailability.length) invalid();
 }

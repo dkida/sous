@@ -1,0 +1,22 @@
+{
+  "purpose": "Explain Mistral validation failures. The benchmark records no output for failed trials, so failures were reproduced in separate scratch runs after the main benchmark finished, using the same prompts, fixtures and provider settings. These diagnostic calls are excluded from every timing and success figure.",
+  "model": "mistral-small-2603",
+  "recipe": {
+    "calls": 3,
+    "failures": 3,
+    "validatorMessage": "Step ingredient references must be an array of ingredient IDs.",
+    "cause": "Every step omitted the required ingredientIds field in all three samples. The rest of the recipe (title, servings, ingredient list incl. olive oil and salt, eight or nine ordered steps) was otherwise well formed."
+  },
+  "missingPaste": {
+    "calls": 11,
+    "failures": 3,
+    "validatorMessage": "The adaptive action is invalid or cannot apply to this cooking state. State has not changed; please clarify or try again.",
+    "cause": "All three failing samples omitted ingredientIds from the replacement step update (same omission as the recipe failures). All three also substituted 30 g tomato purée, which is not in the user's stated ingredients."
+  },
+  "burningOnions": {
+    "calls": 11,
+    "failures": 0,
+    "note": "The single benchmark failure (iteration 3, validated at parse but rejected by the domain operation) did not reproduce; its cause is unknown."
+  },
+  "sampleFailingStepUpdate": {"id": "sauce", "headline": "Add chopped tomatoes and purée", "instruction": "Add chopped tomatoes and 30 g tomato purée to the pan and simmer until the sauce thickens."}
+}

@@ -8,7 +8,8 @@ import { WebCookingService } from "./cooking-service";
 import { cookingHandlers } from "./http";
 import type { CookingReply } from "./contracts";
 
-const proposal = { dishName: "Tomato Pasta", description: "A simple tomato sauce.", estimatedCookingMinutes: 20, servings: 2 };
+const proposal = { dishName: "Tomato Pasta", description: "A simple tomato sauce.", estimatedCookingMinutes: 20, servings: 2,
+  assumedStaples: ["salt"], optionalAdditions: ["basil"], shoppingAdditions: [] };
 const recipe = { id: "pasta", title: proposal.dishName, servings: 2,
   ingredients: [{ id: "pasta", name: "Pasta", quantity: 200, unit: "g" }, { id: "paste", name: "Tomato paste", quantity: 30, unit: "g" }],
   steps: [{ id: "boil", headline: "Boil the pasta", instruction: "Boil the pasta.", ingredientIds: ["pasta"] }, { id: "sauce", headline: "Add the paste", instruction: "Add the paste.", ingredientIds: ["paste"] }] };
@@ -186,7 +187,7 @@ it("client runtime imports contain no providers, server services or credential r
     if (visited.has(file)) return;
     visited.add(file);
     const source = readFileSync(file, "utf8");
-    assert.doesNotMatch(source, /GEMINI_API_KEY|GEMMA_MODEL|LLM_PROVIDER|LLM_MODEL|ELEVENLABS_API_KEY|ELEVENLABS_VOICE_ID|process\.env|selectProvider/);
+    assert.doesNotMatch(source, /MISTRAL_API_KEY|GEMINI_API_KEY|GEMMA_MODEL|LLM_PROVIDER|LLM_MODEL|ELEVENLABS_API_KEY|ELEVENLABS_VOICE_ID|process\.env|selectProvider|api\.mistral\.ai/);
     for (const match of source.matchAll(/import\s+(?!type\b)[^;]*?from\s+["']([^"']+)["']/g)) {
       const path = match[1]!;
       if (!path.startsWith(".")) continue;

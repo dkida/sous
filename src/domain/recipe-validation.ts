@@ -1,3 +1,4 @@
+import { unrepresentedStaples } from "./pantry";
 import type { Recipe } from "./types";
 
 export class InvalidRecipeError extends Error {}
@@ -76,5 +77,10 @@ export function validateRecipe(value: unknown): Recipe {
     }
     return { id, headline: step.headline.trim(), instruction: step.instruction.trim(), ingredientIds: references };
   });
-  return { id: value.id.trim(), title: value.title.trim(), servings: value.servings, ingredients, steps };
+  const recipe = { id: value.id.trim(), title: value.title.trim(), servings: value.servings, ingredients, steps };
+  // UI, voice and adaptive reasoning read structured state, so prose may not rely on an unlisted staple.
+  if (unrepresentedStaples(recipe).length > 0) {
+    invalid("Steps that use salt, black pepper or cooking oil must reference it as a structured ingredient.");
+  }
+  return recipe;
 }

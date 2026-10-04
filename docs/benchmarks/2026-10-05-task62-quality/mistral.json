@@ -1,0 +1,650 @@
+{
+  "provider": "mistral-native-schema",
+  "model": "mistral-small-2603",
+  "maxRequests": 12,
+  "review": "Manual: availability (no unconfirmed non-staples), unused supplied ingredients allowed, staples structured, prose vs quantities, technique, language.",
+  "planning": [
+    {
+      "id": "A-basic-pasta",
+      "language": "en",
+      "input": "I have pasta, tomatoes, parmesan and cream.",
+      "proposal": {
+        "dishName": "Creamy Tomato Pasta",
+        "description": "A quick pasta dish using fresh tomatoes and cream for a light, creamy sauce, finished with parmesan for richness.",
+        "estimatedCookingMinutes": 20,
+        "servings": 2,
+        "assumedStaples": [
+          "salt",
+          "black pepper",
+          "olive oil",
+          "water"
+        ],
+        "optionalAdditions": [],
+        "shoppingAdditions": []
+      },
+      "recipe": {
+        "id": "creamy-tomato-pasta-recipe",
+        "title": "Creamy Tomato Pasta",
+        "servings": 2,
+        "ingredients": [
+          {
+            "id": "pasta",
+            "name": "pasta",
+            "quantity": 200,
+            "unit": "g"
+          },
+          {
+            "id": "tomatoes",
+            "name": "tomatoes",
+            "quantity": 300,
+            "unit": "g"
+          },
+          {
+            "id": "parmesan",
+            "name": "parmesan",
+            "quantity": 40,
+            "unit": "g"
+          },
+          {
+            "id": "cream",
+            "name": "cream",
+            "quantity": 120,
+            "unit": "ml"
+          },
+          {
+            "id": "olive-oil",
+            "name": "olive oil",
+            "quantity": null,
+            "unit": null
+          },
+          {
+            "id": "salt",
+            "name": "salt",
+            "quantity": null,
+            "unit": null
+          },
+          {
+            "id": "black-pepper",
+            "name": "black pepper",
+            "quantity": null,
+            "unit": null
+          },
+          {
+            "id": "water",
+            "name": "water",
+            "quantity": 2,
+            "unit": "l"
+          }
+        ],
+        "steps": [
+          {
+            "id": "prepare-pasta",
+            "headline": "Cook the pasta",
+            "instruction": "Bring 2 l of salted water to a boil in a large pot. Add 200 g pasta and cook according to package instructions until al dente, stirring occasionally. Reserve 120 ml of pasta cooking water, then drain the pasta and set aside.",
+            "ingredientIds": [
+              "pasta",
+              "salt",
+              "water"
+            ]
+          },
+          {
+            "id": "prepare-tomatoes",
+            "headline": "Prepare tomatoes",
+            "instruction": "Cut 300 g tomatoes into small dice, removing any hard cores. Set aside.",
+            "ingredientIds": [
+              "tomatoes"
+            ]
+          },
+          {
+            "id": "sauté-tomatoes",
+            "headline": "Sauté tomatoes",
+            "instruction": "Heat a large pan over medium heat. Add a drizzle of olive oil and the diced tomatoes. Cook for 5 minutes, stirring occasionally, until softened and slightly broken down.",
+            "ingredientIds": [
+              "tomatoes",
+              "olive-oil"
+            ]
+          },
+          {
+            "id": "make-sauce",
+            "headline": "Make the sauce",
+            "instruction": "Reduce heat to low. Stir in 120 ml cream and 40 g grated parmesan. Simmer gently for 3 minutes, stirring often, until the sauce thickens slightly. Season with salt and black pepper to taste.",
+            "ingredientIds": [
+              "cream",
+              "parmesan",
+              "salt",
+              "black-pepper"
+            ]
+          },
+          {
+            "id": "combine-pasta",
+            "headline": "Combine pasta",
+            "instruction": "Add the cooked pasta to the sauce. Toss well to coat evenly. If needed, add a splash of the reserved pasta water to loosen the sauce.",
+            "ingredientIds": [
+              "pasta",
+              "water"
+            ]
+          },
+          {
+            "id": "finish-and-serve",
+            "headline": "Finish and serve",
+            "instruction": "Remove from heat. Taste and adjust seasoning with salt and black pepper if needed. Serve immediately, topped with extra grated parmesan if desired.",
+            "ingredientIds": [
+              "parmesan",
+              "salt",
+              "black-pepper"
+            ]
+          }
+        ]
+      },
+      "nonStapleIngredients": [
+        "pasta",
+        "tomatoes",
+        "parmesan",
+        "cream"
+      ]
+    },
+    {
+      "id": "B-irrelevant-banana",
+      "language": "en",
+      "input": "I have pasta, tomatoes, parmesan, cream and a banana.",
+      "proposal": {
+        "dishName": "Creamy Tomato Pasta",
+        "description": "A simple, rich pasta dish using the tomatoes, cream and pasta you have, finished with parmesan for a savoury touch.",
+        "estimatedCookingMinutes": 20,
+        "servings": 2,
+        "assumedStaples": [
+          "salt",
+          "black pepper",
+          "olive oil",
+          "water"
+        ],
+        "optionalAdditions": [],
+        "shoppingAdditions": []
+      },
+      "recipe": {
+        "id": "creamy-tomato-pasta-recipe",
+        "title": "Creamy Tomato Pasta",
+        "servings": 2,
+        "ingredients": [
+          {
+            "id": "pasta",
+            "name": "pasta",
+            "quantity": 200,
+            "unit": "g"
+          },
+          {
+            "id": "tomatoes",
+            "name": "tomatoes",
+            "quantity": 300,
+            "unit": "g"
+          },
+          {
+            "id": "parmesan",
+            "name": "parmesan",
+            "quantity": 30,
+            "unit": "g"
+          },
+          {
+            "id": "cream",
+            "name": "cream",
+            "quantity": 100,
+            "unit": "ml"
+          },
+          {
+            "id": "olive-oil",
+            "name": "olive oil",
+            "quantity": 15,
+            "unit": "ml"
+          },
+          {
+            "id": "salt",
+            "name": "salt",
+            "quantity": null,
+            "unit": null
+          },
+          {
+            "id": "black-pepper",
+            "name": "black pepper",
+            "quantity": null,
+            "unit": null
+          },
+          {
+            "id": "water",
+            "name": "water",
+            "quantity": null,
+            "unit": null
+          }
+        ],
+        "steps": [
+          {
+            "id": "boil-pasta",
+            "headline": "Cook the pasta",
+            "instruction": "Bring a pot of salted water to a boil. Add 200 g pasta and cook according to the package instructions until al dente. Reserve 100 ml pasta cooking water, then drain the pasta.",
+            "ingredientIds": [
+              "pasta",
+              "salt",
+              "water"
+            ]
+          },
+          {
+            "id": "blanch-tomatoes",
+            "headline": "Prepare tomatoes",
+            "instruction": "Score an X on the bottom of each tomato. Blanch in boiling water for 30 seconds, then transfer to ice water. Peel, deseed and chop the tomatoes into small pieces.",
+            "ingredientIds": [
+              "tomatoes",
+              "water",
+              "salt"
+            ]
+          },
+          {
+            "id": "sauté-tomatoes",
+            "headline": "Sauté tomatoes",
+            "instruction": "Heat 15 ml olive oil in a pan over medium heat. Add the chopped tomatoes and cook for 5 minutes, stirring occasionally, until softened.",
+            "ingredientIds": [
+              "tomatoes",
+              "olive-oil"
+            ]
+          },
+          {
+            "id": "simmer-cream",
+            "headline": "Add cream",
+            "instruction": "Pour 100 ml cream into the pan with the tomatoes. Simmer for 3 minutes, stirring often, until slightly thickened. Season with salt and black pepper to taste.",
+            "ingredientIds": [
+              "cream",
+              "salt",
+              "black-pepper"
+            ]
+          },
+          {
+            "id": "combine-pasta",
+            "headline": "Combine pasta",
+            "instruction": "Add the drained pasta to the tomato-cream mixture. Toss well to coat. If needed, add a splash of the reserved pasta cooking water to loosen the sauce.",
+            "ingredientIds": [
+              "pasta",
+              "water"
+            ]
+          },
+          {
+            "id": "finish-parmesan",
+            "headline": "Add parmesan",
+            "instruction": "Remove the pan from heat. Stir in 30 g grated parmesan until melted and creamy. Taste and adjust seasoning with salt and black pepper if needed.",
+            "ingredientIds": [
+              "parmesan",
+              "salt",
+              "black-pepper"
+            ]
+          },
+          {
+            "id": "serve",
+            "headline": "Serve immediately",
+            "instruction": "Divide the creamy tomato pasta between two plates. Serve hot with extra parmesan if desired.",
+            "ingredientIds": []
+          }
+        ]
+      },
+      "nonStapleIngredients": [
+        "pasta",
+        "tomatoes",
+        "parmesan",
+        "cream"
+      ]
+    },
+    {
+      "id": "C-sparse",
+      "language": "en",
+      "input": "I have eggs and bread.",
+      "proposal": {
+        "dishName": "Simple Scrambled Eggs on Toast",
+        "description": "A quick, filling breakfast using eggs and bread with staples.",
+        "estimatedCookingMinutes": 10,
+        "servings": 1,
+        "assumedStaples": [
+          "salt",
+          "black pepper",
+          "water",
+          "neutral oil"
+        ],
+        "optionalAdditions": [],
+        "shoppingAdditions": []
+      },
+      "recipe": {
+        "id": "simple-scrambled-eggs-on-toast",
+        "title": "Simple Scrambled Eggs on Toast",
+        "servings": 1,
+        "ingredients": [
+          {
+            "id": "egg",
+            "name": "egg",
+            "quantity": 2,
+            "unit": "piece"
+          },
+          {
+            "id": "bread",
+            "name": "bread",
+            "quantity": 1,
+            "unit": "piece"
+          },
+          {
+            "id": "salt",
+            "name": "salt",
+            "quantity": null,
+            "unit": null
+          },
+          {
+            "id": "black-pepper",
+            "name": "black pepper",
+            "quantity": null,
+            "unit": null
+          },
+          {
+            "id": "neutral-oil",
+            "name": "neutral oil",
+            "quantity": 1,
+            "unit": "tsp"
+          }
+        ],
+        "steps": [
+          {
+            "id": "heat-oil",
+            "headline": "Heat the oil",
+            "instruction": "Heat 1 tsp neutral oil in a non-stick pan over medium heat until shimmering but not smoking.",
+            "ingredientIds": [
+              "neutral-oil"
+            ]
+          },
+          {
+            "id": "beat-eggs",
+            "headline": "Beat the eggs",
+            "instruction": "Crack 2 eggs into a bowl, add a pinch of salt and a few grinds of black pepper, and beat until just combined.",
+            "ingredientIds": [
+              "egg",
+              "salt",
+              "black-pepper"
+            ]
+          },
+          {
+            "id": "cook-eggs",
+            "headline": "Cook the eggs",
+            "instruction": "Pour the beaten eggs into the pan. Stir gently with a spatula, folding the eggs from the edges toward the center, until softly set but still slightly runny in the middle, about 2 minutes.",
+            "ingredientIds": [
+              "egg",
+              "neutral-oil"
+            ]
+          },
+          {
+            "id": "toast-bread",
+            "headline": "Toast the bread",
+            "instruction": "While the eggs cook, toast the bread until golden and crisp.",
+            "ingredientIds": [
+              "bread"
+            ]
+          },
+          {
+            "id": "plate",
+            "headline": "Plate the dish",
+            "instruction": "Transfer the scrambled eggs to the toasted bread. Serve immediately.",
+            "ingredientIds": [
+              "egg",
+              "bread"
+            ]
+          }
+        ]
+      },
+      "nonStapleIngredients": [
+        "egg",
+        "bread"
+      ]
+    },
+    {
+      "id": "D-shopping-allowed",
+      "language": "en",
+      "input": "I have pasta, tomatoes and parmesan. I can buy a couple things.",
+      "proposal": {
+        "dishName": "Simple Tomato Pasta with Parmesan",
+        "description": "A quick pasta dish using fresh tomatoes and parmesan for a light, flavorful meal with minimal ingredients.",
+        "estimatedCookingMinutes": 20,
+        "servings": 2,
+        "assumedStaples": [
+          "salt",
+          "olive oil",
+          "water"
+        ],
+        "optionalAdditions": [],
+        "shoppingAdditions": [
+          "garlic",
+          "basil"
+        ]
+      },
+      "recipe": {
+        "id": "simple-tomato-pasta-parmesan",
+        "title": "Simple Tomato Pasta with Parmesan",
+        "servings": 2,
+        "ingredients": [
+          {
+            "id": "pasta",
+            "name": "pasta",
+            "quantity": 200,
+            "unit": "g"
+          },
+          {
+            "id": "tomatoes",
+            "name": "tomatoes",
+            "quantity": 300,
+            "unit": "g"
+          },
+          {
+            "id": "parmesan",
+            "name": "parmesan",
+            "quantity": 40,
+            "unit": "g"
+          },
+          {
+            "id": "olive-oil",
+            "name": "olive oil",
+            "quantity": null,
+            "unit": null
+          },
+          {
+            "id": "salt",
+            "name": "salt",
+            "quantity": null,
+            "unit": null
+          },
+          {
+            "id": "water",
+            "name": "water",
+            "quantity": null,
+            "unit": null
+          },
+          {
+            "id": "garlic",
+            "name": "garlic",
+            "quantity": 1,
+            "unit": "clove"
+          },
+          {
+            "id": "basil",
+            "name": "basil",
+            "quantity": 4,
+            "unit": "piece"
+          }
+        ],
+        "steps": [
+          {
+            "id": "prepare-pasta",
+            "headline": "Cook the pasta",
+            "instruction": "Bring a pot of salted water to a boil. Add 200 g pasta and cook according to package instructions until al dente. Reserve 125 ml pasta cooking water, then drain the pasta.",
+            "ingredientIds": [
+              "pasta",
+              "salt",
+              "water"
+            ]
+          },
+          {
+            "id": "prepare-tomatoes",
+            "headline": "Prepare tomatoes",
+            "instruction": "Score the skin of the tomatoes with a small cross at the base. Blanch in boiling water for 10 seconds, then transfer to ice water to cool. Peel, deseed, and finely chop the tomatoes.",
+            "ingredientIds": [
+              "tomatoes",
+              "water"
+            ]
+          },
+          {
+            "id": "sauté-garlic",
+            "headline": "Sauté garlic",
+            "instruction": "Heat 1 tbsp olive oil in a large pan over medium heat. Add 1 clove garlic and sauté for 30 seconds until fragrant but not browned.",
+            "ingredientIds": [
+              "olive-oil",
+              "garlic"
+            ]
+          },
+          {
+            "id": "cook-tomatoes",
+            "headline": "Cook tomatoes",
+            "instruction": "Add the chopped tomatoes to the pan with the garlic. Simmer over medium-low heat for 8–10 minutes, stirring occasionally, until the tomatoes break down into a thick sauce. Season with salt to taste.",
+            "ingredientIds": [
+              "tomatoes",
+              "salt"
+            ]
+          },
+          {
+            "id": "combine-pasta",
+            "headline": "Combine pasta",
+            "instruction": "Add the drained pasta to the tomato sauce. Toss well to coat. If needed, add a splash of the reserved pasta cooking water to loosen the sauce.",
+            "ingredientIds": [
+              "pasta",
+              "water"
+            ]
+          },
+          {
+            "id": "finish-dish",
+            "headline": "Finish the dish",
+            "instruction": "Remove the pan from heat. Stir in 40 g grated parmesan. Tear 4 basil leaves and stir half into the pasta. Taste and adjust seasoning with salt if needed.",
+            "ingredientIds": [
+              "parmesan",
+              "basil",
+              "salt"
+            ]
+          },
+          {
+            "id": "serve",
+            "headline": "Serve immediately",
+            "instruction": "Divide the pasta between two plates. Garnish each portion with the remaining basil leaves. Serve warm.",
+            "ingredientIds": [
+              "basil"
+            ]
+          }
+        ]
+      },
+      "nonStapleIngredients": [
+        "pasta",
+        "tomatoes",
+        "parmesan",
+        "garlic",
+        "basil"
+      ]
+    },
+    {
+      "id": "E-polish",
+      "language": "pl",
+      "input": "Mam makaron, pomidory, śmietanę i parmezan.",
+      "proposal": {
+        "dishName": "Makaron z pomidorami i parmezanem",
+        "description": "Prosty makaron z pomidorami i śmietaną, wzbogacony parmezanem. Danie wykorzystuje dostępne składniki, aby stworzyć sycący posiłek z minimalnym wysiłkiem.",
+        "estimatedCookingMinutes": 20,
+        "servings": 2,
+        "assumedStaples": [
+          "sól",
+          "olej roślinny"
+        ],
+        "optionalAdditions": [
+          "czosnek"
+        ],
+        "shoppingAdditions": []
+      },
+      "failure": {
+        "stage": "recipe",
+        "kind": "InvalidRecipeError",
+        "message": "Steps that use salt, black pepper or cooking oil must reference it as a structured ingredient.",
+        "rejectedModelText": "{\"id\": \"makaron-z-pomidorami-i-parmezanem\", \"title\": \"Makaron z pomidorami i parmezanem\", \"servings\": 2, \"ingredients\": [{\"id\": \"makaron\", \"name\": \"makaron\", \"quantity\": 200, \"unit\": \"g\"}, {\"id\": \"pomidory\", \"name\": \"pomidory\", \"quantity\": 300, \"unit\": \"g\"}, {\"id\": \"smietana\", \"name\": \"śmietana 18%\", \"quantity\": 100, \"unit\": \"ml\"}, {\"id\": \"parmezan\", \"name\": \"parmezan\", \"quantity\": 30, \"unit\": \"g\"}, {\"id\": \"olej\", \"name\": \"olej roślinny\", \"quantity\": null, \"unit\": null}, {\"id\": \"sol\", \"name\": \"sól\", \"quantity\": null, \"unit\": null}], \"steps\": [{\"id\": \"krojenie-pomidorow\", \"headline\": \"Pokrój pomidory\", \"instruction\": \"Pomidory pokrój w drobną kostkę, usuwając gniazda nasienne. Przełóż do miseczki.\", \"ingredientIds\": [\"pomidory\"]}, {\"id\": \"gotowanie-makaronu\", \"headline\": \"Ugotuj makaron\", \"instruction\": \"W dużym garnku zagotuj 1 l osolonej wody z 1 łyżką oleju. Wrzuć 200 g makaronu i gotuj zgodnie z czasem podanym na opakowaniu, aż będzie al dente. Odcedź, zachowując 100 ml wody z gotowania.\", \"ingredientIds\": [\"makaron\", \"olej\", \"sol\"]}, {\"id\": \"podgrzewanie-smietany\", \"headline\": \"Podgrzej śmietanę\", \"instruction\": \"W małym rondelku podgrzej 100 ml śmietany na średnim ogniu, aż zacznie lekko wrzeć. Nie doprowadzaj do wrzenia. Dopraw szczyptą soli i czarnym pieprzem do smaku.\", \"ingredientIds\": [\"smietana\", \"sol\"]}, {\"id\": \"laczenie-skladnikow\", \"headline\": \"Połącz składniki\", \"instruction\": \"Do makaronu dodaj pokrojone pomidory i wymieszaj. Wlej podgrzaną śmietanę, dodaj 50 ml wody z gotowania makaronu i ponownie wymieszaj. Dopraw solą i czarnym pieprzem do smaku.\", \"ingredientIds\": [\"makaron\", \"pomidory\", \"smietana\", \"sol\"]}, {\"id\": \"podawanie\", \"headline\": \"Podaj z parmezanem\", \"instruction\": \"Przełóż makaron na talerze. Posyp startym parmezanem (30 g) i podawaj od razu.\", \"ingredientIds\": [\"parmezan\", \"makaron\"]}]}"
+      }
+    }
+  ],
+  "adaptive": [
+    {
+      "scenario": "missing-paste",
+      "timing": {
+        "interaction": "adaptive",
+        "outcome": "ok",
+        "totalMs": 1261.4723919999997,
+        "llmMs": 1257.1739500000003,
+        "validationMs": 1.5523279999979422,
+        "operationMs": 2.268531999998231
+      },
+      "promptHash": "778b77b6e17993129408ba805920edcf7d910d40a0f8e338337cf9f3ca902d26",
+      "success": true,
+      "failureKind": null,
+      "validStructuredOutput": true,
+      "correctStateTransition": true,
+      "completedHistoryPreserved": true,
+      "culinaryAssessment": "requires manual review",
+      "output": {
+        "type": "ingredient_change",
+        "message": "We’ll omit the tomato paste and let the canned tomatoes reduce to concentrate their flavor. The sauce will still be rich and tasty.",
+        "originalIngredientId": "paste",
+        "replacement": null,
+        "reason": "Tomato paste is only used for flavor concentration; reducing the canned tomatoes will achieve a similar depth without it.",
+        "stepUpdates": [
+          {
+            "id": "sauce",
+            "headline": "Add chopped tomatoes",
+            "instruction": "Add chopped tomatoes to the pan and simmer until the sauce thickens enough to coat the back of a spoon.",
+            "ingredientIds": [
+              "tomatoes"
+            ]
+          }
+        ],
+        "additionalIngredients": [],
+        "ingredientAvailability": []
+      },
+      "rejectedModelText": null
+    },
+    {
+      "scenario": "burning-onions",
+      "timing": {
+        "interaction": "adaptive",
+        "outcome": "ok",
+        "totalMs": 1262.5427940000009,
+        "llmMs": 1261.6784880000014,
+        "validationMs": 0.15155500000037136,
+        "operationMs": 0.4996069999979227
+      },
+      "promptHash": "4600daba6c6325f0d8ed20e2667b92e2df525bc2a2534c374991dfc2b7f9990f",
+      "success": true,
+      "failureKind": null,
+      "validStructuredOutput": true,
+      "correctStateTransition": true,
+      "completedHistoryPreserved": true,
+      "culinaryAssessment": "requires manual review",
+      "output": {
+        "type": "cooking_problem",
+        "message": "Remove the pan from the heat immediately to stop the onions from burning. Lower the heat to medium-low once you return it to the burner.",
+        "stepUpdates": [
+          {
+            "id": "saute",
+            "headline": "Lower heat and save onions",
+            "instruction": "Remove the pan from the heat immediately to stop the onions from burning. Once removed, lower the burner to medium-low heat. Return the pan to the burner and continue sautéing the onion and garlic until softened, stirring frequently.",
+            "ingredientIds": [
+              "oil",
+              "onion",
+              "garlic"
+            ]
+          }
+        ],
+        "additionalIngredients": [],
+        "ingredientAvailability": []
+      },
+      "rejectedModelText": null
+    }
+  ]
+}

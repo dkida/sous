@@ -1,0 +1,36 @@
+{
+  "repetitions": 3,
+  "providers": [
+    {
+      "name": "gemma",
+      "model": "gemma-4-26b-a4b-it"
+    },
+    {
+      "name": "gemini-flash-lite",
+      "model": "gemini-3.5-flash-lite"
+    },
+    {
+      "name": "mistral",
+      "model": "mistral-small-2603"
+    }
+  ],
+  "scenarios": [
+    "proposal",
+    "recipe",
+    "missing-paste",
+    "scale-2-to-4",
+    "burning-onions"
+  ],
+  "generationConfig": {
+    "temperature": 0.2,
+    "maxOutputTokens": 8192
+  },
+  "timeoutMs": 120000,
+  "structuredOutput": "prompted JSON for every provider; native-schema probe excluded",
+  "order": "sequential paired scenarios; provider order alternates each repetition",
+  "context": "fixed accepted proposal; independent fixed adaptive recipe; pasta done for burning, pasta and saute done for missing/scaling",
+  "prompts": "unchanged CookingAgent prompts; only hashes stored",
+  "warmups": 0,
+  "retries": 0,
+  "culinaryAssessment": "manual review of validated synthetic cooking output required"
+}

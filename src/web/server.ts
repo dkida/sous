@@ -6,6 +6,7 @@ import { WebCookingService } from "./cooking-service";
 // Deliberately neither persisted nor shared across workers/server instances.
 const processState = globalThis as typeof globalThis & { sousCookingService?: WebCookingService };
 export const cookingService = processState.sousCookingService = new WebCookingService(() => selectProvider({
+  MISTRAL_API_KEY: process.env.MISTRAL_API_KEY,
   GEMINI_API_KEY: process.env.GEMINI_API_KEY,
   GEMMA_MODEL: process.env.GEMMA_MODEL,
   LLM_PROVIDER: process.env.LLM_PROVIDER,

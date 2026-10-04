@@ -5,10 +5,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { it } from "node:test";
 
-it("routes adaptive CLI messages, retains deterministic commands and handles reconciliation completion", () => {
+it("routes adaptive CLI messages through the default Mistral provider with native schemas, retains deterministic commands and handles reconciliation completion", () => {
   const directory = mkdtempSync(join(tmpdir(), "sous-cli-test-"));
   const fixture = join(directory, "mock-http.mjs");
-  // Child process has a fictional credential and mocked fetch. No environment file is loaded.
+  // Default provider (Mistral) with a fictional credential and mocked fetch. No environment file is loaded.
   const outputs = [
     { dishName: "Tomato pasta", description: "Simple pasta.", estimatedCookingMinutes: 20, servings: 2 },
     { id: "pasta", title: "Tomato pasta", servings: 2,
@@ -22,17 +22,21 @@ it("routes adaptive CLI messages, retains deterministic commands and handles rec
     { type: "reconcile_progress", message: "The sauce is ready.", completedSteps: [{ stepId: "sauce", evidence: "I simmered the sauce" }] },
   ];
   writeFileSync(fixture, `const outputs = ${JSON.stringify(outputs)};
-globalThis.fetch = async (_url, options) => {
-  const prompt = JSON.parse(options.body).contents[0].parts[0].text;
+const contracts = ["dish_proposal", "recipe", "adaptive_action", "adaptive_action", "adaptive_action", "adaptive_action"];
+globalThis.fetch = async (url, options) => {
+  if (String(url) !== 'https://api.mistral.ai/v1/chat/completions') throw new Error('Unexpected provider');
+  const body = JSON.parse(options.body);
+  if (body.model !== 'mistral-small-2603' || body.response_format?.json_schema?.name !== contracts.shift() || body.response_format.json_schema.strict !== true) throw new Error('Missing native schema');
+  const prompt = body.messages[0].content;
   if (outputs.length === 1 && !prompt.includes('"previousClarification":null')) throw new Error('Stale clarification');
   const output = outputs.shift();
   if (!output) throw new Error('Unexpected model call');
-  return new Response(JSON.stringify({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: JSON.stringify(output) }] } }] }));
+  return new Response(JSON.stringify({ choices: [{ finish_reason: 'stop', message: { content: JSON.stringify(output) } }] }));
 };
 `);
   try {
     const result = spawnSync(process.execPath, ["--import", "tsx", "--import", fixture, "src/cli/agent.ts"], {
-      cwd: process.cwd(), env: { PATH: process.env.PATH, NODE_ENV: "test", GEMINI_API_KEY: "fictional-cli-key" }, encoding: "utf8", timeout: 10_000,
+      cwd: process.cwd(), env: { PATH: process.env.PATH, NODE_ENV: "test", MISTRAL_API_KEY: "fictional-cli-key" }, encoding: "utf8", timeout: 10_000,
       input: ["pasta and tomato paste", "yes", "next", "done", "oh i dont have tomato paste, my bad", "now",
         "The sauce is too thick", "Very thick", "I simmered the sauce", "next", "exit", ""].join("\n"),
     });
@@ -73,6 +77,7 @@ it("includes newly available garlic in the experimental CLI while next reads and
         { id: "saute", headline: "Sauté onion and mushrooms", instruction: "Sauté onion and mushrooms, then stir in cream and pasta.", ingredientIds: ["onion", "mushrooms", "cream", "pasta"] }] },
     { type: "cooking_problem", message: "Mince two cloves of garlic and add them after browning the mushrooms.",
       additionalIngredients: [{ id: "garlic", name: "Garlic", quantity: 2, unit: "cloves" }],
+      ingredientAvailability: [{ ingredientId: "garlic", basis: "cook_confirmed", evidence: "i have garlic too" }],
       stepUpdates: [{ id: "prep", headline: "Prepare onion, mushrooms and garlic", instruction: "Dice onion, slice mushrooms and mince two cloves of garlic.", ingredientIds: ["onion", "mushrooms", "garlic"] },
         { id: "saute", headline: "Brown onion and mushrooms", instruction: "Brown onion and mushrooms; briefly sauté garlic, then stir in cream and pasta.", ingredientIds: ["onion", "mushrooms", "garlic", "cream", "pasta"] }] },
   ];

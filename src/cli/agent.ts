@@ -17,7 +17,7 @@ function showProgress(progress: CookingProgress, first = false): void {
 }
 
 async function main(): Promise<void> {
-  const selected = selectProvider({ GEMINI_API_KEY: process.env.GEMINI_API_KEY, GEMMA_MODEL: process.env.GEMMA_MODEL,
+  const selected = selectProvider({ MISTRAL_API_KEY: process.env.MISTRAL_API_KEY, GEMINI_API_KEY: process.env.GEMINI_API_KEY, GEMMA_MODEL: process.env.GEMMA_MODEL,
     LLM_PROVIDER: process.env.LLM_PROVIDER, LLM_MODEL: process.env.LLM_MODEL });
   const agent = new CookingAgent(selected.provider, undefined, undefined, logInteractionTiming);
   const input = createInterface({ input: stdin, output: stdout, terminal: stdin.isTTY });
@@ -34,7 +34,9 @@ async function main(): Promise<void> {
           console.log("Sous: Enter ingredients, then yes to accept (or no to try new ingredients). During cooking: now/next/what do I do now?/what do I do next? reads the current step; done completes it and advances. You can also describe missing ingredients, substitutions, changed portions, cooking problems, or work already done. Type exit to quit.");
         } else if (phase === "ingredients") {
           const proposal = await agent.proposeDish(line);
-          console.log(`Sous: We can make ${proposal.dishName}. ${proposal.description} It takes about ${proposal.estimatedCookingMinutes} minutes and serves ${proposal.servings}. Would you like to make it?`);
+          const lists = [["Assumed", proposal.assumedStaples], ["Better if you have", proposal.optionalAdditions], ["To buy", proposal.shoppingAdditions]] as const;
+          const extras = lists.filter(([, items]) => items.length > 0).map(([label, items]) => ` ${label}: ${items.join(", ")}.`).join("");
+          console.log(`Sous: We can make ${proposal.dishName}. ${proposal.description}${extras} It takes about ${proposal.estimatedCookingMinutes} minutes and serves ${proposal.servings}. Would you like to make it?`);
           phase = "proposal";
         } else if (phase === "proposal") {
           if (["yes", "y", "accept", "let's make it"].includes(command)) {
@@ -81,6 +83,6 @@ async function main(): Promise<void> {
 }
 
 main().catch(() => {
-  console.error("Sous: Could not start. Set GEMINI_API_KEY and check LLM_PROVIDER / LLM_MODEL (or GEMMA_MODEL for Gemma). Gemma remains the default; Gemini Flash-Lite is experimental.");
+  console.error("Sous: Could not start. Set MISTRAL_API_KEY for the default Mistral Small 4 model, or choose LLM_PROVIDER=gemma / gemini-flash-lite with GEMINI_API_KEY. Check LLM_MODEL if set.");
   process.exitCode = 1;
 });

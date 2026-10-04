@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { GeminiFlashLiteProviderError } from "../infrastructure/gemini-flash-lite-provider";
+import { MistralProviderError } from "../infrastructure/mistral-provider";
 import { acceptedProposal, fixtureRecipe, runScenario, scenarios } from "./scenarios";
 
 describe("fixed inference benchmark scenarios", () => {
@@ -49,5 +50,22 @@ describe("fixed inference benchmark scenarios", () => {
     assert.equal(result.correctStateTransition, true);
     assert.equal(result.completedHistoryPreserved, true);
     assert.equal(result.output, null);
+  });
+  it("classifies Mistral access failures so the runner can stop that provider", async () => {
+    const result = await runScenario("proposal", { generate: async () => { throw new MistralProviderError("Mistral request failed (HTTP 401)."); } });
+    assert.equal(result.failureKind, "http-401");
+    assert.equal(result.output, null);
+  });
+  it("keeps rejected model text visible and separates malformed JSON from invalid contracts", async () => {
+    const malformed = await runScenario("proposal", { generate: async () => "not json" });
+    assert.equal(malformed.failureKind, "malformed-json");
+    assert.equal(malformed.rejectedModelText, "not json");
+    const stepWithoutIds = JSON.stringify({ ...fixtureRecipe(), steps: fixtureRecipe().steps.map(({ ingredientIds: _, ...step }) => step) });
+    let calls = 0;
+    const invalid = await runScenario("recipe", { generate: async () => { calls++; return stepWithoutIds; } });
+    assert.equal(calls, 1);
+    assert.equal(invalid.failureKind, "invalid-recipe");
+    assert.equal(invalid.rejectedModelText, stepWithoutIds);
+    assert.equal((await runScenario("proposal", { generate: async () => JSON.stringify(acceptedProposal) })).rejectedModelText, null);
   });
 });

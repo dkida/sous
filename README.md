@@ -1,350 +1,199 @@
 # Sous
 
-The product source of truth is [docs/PROJECT.md](docs/PROJECT.md).
+Sous is a voice-first cooking companion built for Natalia, my partner. Tell it
+what ingredients you have, accept a dish, and cook one step at a time. When real
+life changes the plan, Sous can adapt the remaining work while preserving what
+has already happened.
 
-Tasks 1–3 provide a text cooking agent with adaptive cooking and a terminal
-interface over the framework-independent cooking domain. Task 4 exposes the same
-agent through a responsive, state-first cooking interface.
+Recipes work until real life happens: your hands are occupied, an ingredient is
+missing, something starts burning, or the number of servings changes. Searching,
+scrolling and recalculating in the middle of cooking is annoying. Sous keeps the
+cooking plan and current step together so you can continue cooking.
 
-## Development
+**Release status:** feature freeze; public Render deployment and physical-device
+validation are pending. No verified live URL or final production screenshots are
+available yet. See [release verification](docs/release/VERIFICATION.md) and
+[project status](docs/STATUS.md).
 
-Requires Node.js 22 or newer.
+## Cook with Sous
+
+1. Choose EN or PL before starting. English is the default.
+2. Type ingredients and quantities, or press the microphone, speak, and Stop.
+   Review/edit the transcribed ingredients, then request a proposal.
+3. Accept the dish to start cooking. The current action, complete instruction and
+   relevant quantities remain prominent.
+4. Use **Done · next** to finish a step. Ask questions or report changes through
+   the same composer, by text or microphone. **Repeat / powtórz** reads the current
+   instruction without advancing; Stop finishes a recording and Cancel discards it.
+5. Finish the remaining steps, then **Cook something else** to reset.
+
+The differentiator is **plan → cook → reality changes → adapt remaining plan →
+continue cooking**, rather than recipe generation alone. Application-owned state,
+deterministic progression, ingredient quantities, validated adaptive operations
+and immutable completed instructions keep the model from freely replacing history.
+English and Polish share the same agent, state and voice path.
+
+## Architecture
+
+```text
+Browser: responsive Next.js / React UI (not an offline PWA)
+  |-- finite microphone recording --> ElevenLabs Scribe v2 STT
+  |                                   ^ one-use token from server
+  |-- typed text / recognized speech / buttons
+  v
+Next.js Node server: /api/cooking
+  |-- retained CookingAgent --> LLMProvider.generate(prompt, contract)
+  |                             |-- Mistral Small 4 (default; native JSON Schema)
+  |                             `-- Gemma / Flash-Lite (explicit alternates)
+  |-- CookingSessionStore (memory; validated operations)
+  `-- retained speech handle --> /api/voice/speech
+                                  --> ElevenLabs Flash v2.5 TTS
+                                  --> browser MP3 playback
+```
+
+Long-lived provider keys remain on the server. The browser receives only a
+short-lived single-use STT token. Model output is untrusted JSON: validation and
+the domain store control state changes. Current/repeat and Done need no inference.
+Voice is an interface around the same cooking application, not another agent.
+
+## Open-weight reasoning
+
+Sous reasons with **Mistral Small 4 (`mistral-small-2603`)**, an Apache 2.0
+open-weight model, served by Mistral's hosted API. It is the application default
+and the model the Render configuration selects.
+
+Every request names its contract (dish proposal, recipe or adaptive action).
+Mistral enforces that contract's JSON Schema natively, and Sous still parses and
+validates every response before any state changes:
+
+Mistral → native JSON Schema → parse → Sous validation → domain/state transition.
+
+Open weights mean the reasoning layer could in principle be self-hosted, run
+locally on suitable hardware, or fine-tuned without redesigning cooking state or
+the UI. No local inference endpoint is implemented or verified, and the deployed
+app needs network access for Mistral and ElevenLabs.
+
+Gemma 4 and Gemini Flash-Lite remain explicit, non-default alternates
+(`LLM_PROVIDER=gemma` or `gemini-flash-lite`, with `GEMINI_API_KEY`). How the
+choice was made:
+- [Gemma vs Flash-Lite](docs/benchmarks/2026-10-04-flash-lite/REPORT.md):
+  hosted Gemma was too slow for interactive cooking.
+- [Mistral prompt-only vs native schema](docs/benchmarks/2026-10-05-mistral/REPORT.md).
+- [Task 6.2 quality check](docs/benchmarks/2026-10-05-task62-quality/REVIEW.md).
+
+There is no automatic provider fallback and no browser provider selector. The
+Render deployment itself has not yet been verified.
+
+## Voice
+
+Microphone → ElevenLabs STT → same application path as typed input → validated
+cooking operation → ElevenLabs TTS → browser playback. Ingredient capture stops
+at an editable draft; cooking voice responses include the complete current
+instruction and useful known quantities. EN/PL uses explicit language hints.
+
+Push-to-talk requires HTTPS, microphone permission, MediaRecorder and network
+access. Hiding the page cancels local voice work. Text/buttons remain available
+after recoverable voice failures; TTS failure preserves a committed cooking change.
+Physical phones, microphone accuracy and acoustic playback still require testing.
+Wake-word feasibility was investigated and deliberately not shipped because it
+failed the reliability/deployment release bar. See [VOICE.md](docs/VOICE.md) and
+the [NO-GO decision](docs/WAKE_WORD_FEASIBILITY.md).
+
+## Recipe planning
+
+Supplied ingredients describe what the cook has. Basic pantry staples and helpful
+optional additions are separate concepts: an optional addition should never be
+represented as confirmed availability. A meal should use the ingredients that
+make culinary sense rather than force everything into it.
+
+Sous assumes only water, salt, black pepper and one cooking oil (neutral or
+olive). Everything else, such as onion, garlic, butter, herbs or tomato
+purée, is unavailable until the cook says they have it.
+- A proposal lists the staples it assumes, at most three optional "better if
+  you have" additions, and, only if the cook offers to shop, at most three
+  purchases.
+- A recipe step that mentions salt, pepper or oil must reference it as a
+  structured ingredient, so the screen, voice and later adaptations all see it.
+- An adaptive change may only add an ingredient that is a staple or that the
+  cook confirmed in their own words.
+
+The policy and these rules are enforced in code (Task 6.2). Recipe quality and
+technique still depend on model reasoning: there is no external recipe
+database, RAG or recipe retrieval.
+
+## Run locally
+
+Requires Node.js 22+ and npm. The Render candidate pins Node 22.18.0.
 
 ```sh
 npm ci
+cp .env.example .env.local
+# Privately populate the required credentials in .env.local.
 npm run dev
 ```
 
-Set `GEMINI_API_KEY` in your untracked `.env.local`, then open
-http://localhost:3000 to cook. Next.js loads the server environment automatically.
+Open http://localhost:3000. Next.js loads the untracked server environment file.
+Do not commit populated environment files or use NEXT_PUBLIC_ for provider settings.
+
+| Environment variable | Purpose |
+| --- | --- |
+| MISTRAL_API_KEY | Required: default Mistral Small 4 reasoning (server-only) |
+| ELEVENLABS_API_KEY | Required for STT/TTS; cooking text works without voice |
+| LLM_PROVIDER | Optional: `mistral` (default), or `gemma` / `gemini-flash-lite` |
+| LLM_MODEL | Optional model override (Mistral: a pinned `mistral-small-NNNN`) |
+| GEMINI_API_KEY | Only for the non-default Gemma / Flash-Lite alternates |
+| GEMMA_MODEL | Gemma model when `LLM_PROVIDER=gemma` and LLM_MODEL is absent |
+| ELEVENLABS_VOICE_ID | Optional available voice; existing default retained |
+| NODE_VERSION | Render runtime version |
+| NODE_ENV | Production mode on Render |
+| PORT | Render-supplied listening port |
 
 ```sh
 npm test
 npm run typecheck
-npm run build
+npm run build -- --webpack
+npm run start -- --hostname 0.0.0.0
 ```
 
-Tests use Node's built-in test runner with tsx to load TypeScript. Unit tests run
-in one process with separate stores. The CLI integration test starts an isolated
-child process with a fictional credential and mocked HTTP. All model calls and
-HTTP requests are mocked: tests do not load local credentials, access the network,
-or consume model credits.
+Tests mock inference and voice/network and do not load credentials or consume
+provider credits. The complete suite includes CLI subprocess and client/server
+import-boundary checks. There is no lint script. For the optional terminal flow:
+`npm run dev:agent`. Live benchmark commands consume provider credits and are
+not part of automated verification.
 
-## Web cooking flow
+## Deploy to Render
 
-Choose **EN / PL** in the header before requesting a dish. English is the default.
-The selection covers interface copy, cooking responses and ElevenLabs voice; it
-locks until **Start over** / **Cook something else**. Polish exact commands such as
-**gotowe** and **powtórz** share the existing completion/current-step logic. No
-additional environment variables are required.
+Use [render.yaml](render.yaml) and the [deployment runbook](docs/release/DEPLOYMENT.md).
+A Node web service is required; static export cannot run the cooking/voice APIs.
+The candidate uses one Starter instance and manual deployments to avoid idle
+sleep and unintended session resets during cooking. Billing/account access is
+pending; the file is preparation, not evidence of a running service.
 
-Enter ingredients, review one proposed dish, then select **Let’s cook**. The
-current instruction and relevant ingredient quantities dominate the cooking
-surface. **Done · next** completes that step. The dark **Ask Sous** composer combines
-multiline text, a microphone action and send. Enter sends; Shift+Enter adds a
-newline. Use the microphone, then **Stop** to send a recording; **Cancel** discards
-it. Listening, processing, speech and recoverable errors appear inside the
-composer. Type missing ingredients,
-changed portions, cooking problems or questions in the dark action strip. Sous
-returns a concise response and the authoritative updated plan. Complete the last
-step to finish, then choose **Cook something else** to reset.
+A Secure, HttpOnly, SameSite=Strict cookie identifies one server-memory flow.
+Reload retains the session while the process lives. Restart, redeploy or process
+replacement loses it: use **Start again** to recover. Tabs share the cookie;
+separate browser profiles have separate flows. Do not scale to multiple workers
+or instances. There is no durable persistence.
 
-The visual source of truth is [docs/DESIGN.md](docs/DESIGN.md) and its reference.
-Desktop keeps the full ingredient list in a right sidebar, expanded by default,
-with servings as secondary metadata. Adaptive feedback sits directly after the
-current-step quantities. Mobile has a vertical cooking layout, a collapsible
-full ingredient list and a fixed bottom action dock. There are
-no fake timer controls or inferred heat badges.
+## Limitations
 
-The existing provider configuration also applies to the web server. For example,
-to opt into the experimental Flash-Lite adapter without changing any files:
+- Hosted inference and ElevenLabs need network access, account access and quota;
+  the app is not fully offline. Model requests time out after 120 seconds.
+- Sessions live in memory until reset/process exit. No persistent pantry/history,
+  database, accounts or authentication. A public link can consume provider quota;
+  this MVP has no application rate limiting or session expiration scheduler.
+- Free Render instances sleep after idle periods, causing session loss and cold
+  starts. Starter avoids idle sleep but still cannot preserve memory across restarts.
+- No wake word, background listening or timer scheduling.
+- Browser permission, recording support and autoplay policy can interrupt voice.
+  Safari/iOS and Android/Chrome physical support remain unverified.
+- Shape/reference/history checks do not prove culinary correctness, food safety,
+  evidence interpretation or consistency of every prose quantity. Completed steps
+  are immutable; partial ingredient use is conservative; adaptations fit existing
+  current/future steps without inserting or reordering steps.
+- Final deployment screenshots, production walkthrough, phone and Natalia checks
+  remain pending. Existing design evidence is local historical verification.
 
-```sh
-LLM_PROVIDER=gemini-flash-lite LLM_MODEL=gemini-3.5-flash-lite npm run dev
-```
-
-Gemma remains the default. There is no browser provider selector or automatic
-fallback. Credentials and model calls stay server-side.
-
-`/api/cooking` uses uncached GET snapshots and validated POST commands. A private
-browser cookie identifies one process-local agent and its existing in-memory
-store, retaining proposals and clarification context across requests and page
-reloads. Restarting the server loses sessions; separate processes do not share
-state. Use **Start again** if your session has expired. Reset removes the old
-flow. No database, authentication or browser recipe persistence is added.
-Production cookies are Secure; use HTTPS outside localhost. Deployment is not
-part of Task 4.
-
-Model failures preserve state and typed input for retry. A connection interruption
-can occur after a server operation has succeeded; typing **current** (English) or
-**powtórz** (Polish) refreshes the confirmed state, and completion requests carry the expected step ID so a retry
-cannot accidentally advance another step. The UI displays the latest response,
-not a chat transcript. Step timing and heat are only shown when present in the
-actual instruction; they are not structured fields in the current domain.
-
-## Text cooking flow
-
-Set `GEMINI_API_KEY` in your untracked `.env.local`, then run:
-
-```sh
-npm run dev:agent
-```
-
-The CLI loads `.env.local` without modifying it. Never commit that file or your key.
-Hosted Gemma uses Google's Gemini API, with `gemma-4-26b-a4b-it` as the default.
-An optional `GEMMA_MODEL` environment variable selects another hosted Gemma model:
-
-```sh
-GEMMA_MODEL=gemma-4-31b-it npm run dev:agent
-```
-
-Gemma 4 remains the default open-weight provider. For experimental inference
-comparisons only, select Gemini Flash-Lite without changing code or your secrets:
-
-```sh
-LLM_PROVIDER=gemini-flash-lite LLM_MODEL=gemini-3.5-flash-lite npm run dev:agent
-LLM_PROVIDER=gemma LLM_MODEL=gemma-4-26b-a4b-it npm run dev:agent
-```
-
-`LLM_PROVIDER` accepts `gemma` (default) or `gemini-flash-lite` (experimental).
-`LLM_MODEL` overrides the selected provider's model. With no override, Gemma
-uses `GEMMA_MODEL` or `gemma-4-26b-a4b-it`; Flash-Lite uses
-`gemini-3.5-flash-lite`. Both use the existing `GEMINI_API_KEY` loader. There is
-no automatic provider/model fallback, winner selection, or migration.
-
-The experimental adapter implements the unchanged `LLMProvider.generate(prompt)`
-interface. Baseline requests use the same temperature (0.2), token limit (8192),
-120-second timeout, and prompted JSON as Gemma. Model-specific default thinking
-behavior is left unchanged. The agent, domain semantics, and state ownership are
-the same for both providers; no streaming is added.
-
-To check project-visible model IDs and run a controlled comparison:
-
-```sh
-npm run bench:models
-npm run bench:inference -- --repetitions 3 --output docs/benchmarks/my-comparison
-```
-
-The benchmark calls the existing agent with fixed ingredient input, a fixed
-accepted proposal for recipe generation, and independent fixed cooking sessions
-for each adaptive scenario. It compares proposal, recipe generation, missing
-tomato paste, scaling from two to four, and burning onions. Requests are paired
-sequentially; provider order alternates each repetition. Prompt hashes must match
-across providers and repetitions, but complete prompts are neither printed nor
-saved. Each request records provider/model, all four durations, success/failure,
-structured validity, transition/history checks, and validated synthetic cooking
-output for manual culinary review. A successful request can still fail its
-scenario check. Failed requests are recorded with unchanged-state checks.
-
-Default repetitions are three (configurable from one to ten). Optional
-`BENCH_GEMMA_MODEL` and `BENCH_FLASH_LITE_MODEL` overrides change benchmark models
-without affecting the CLI default. The runner stops requesting a provider after
-an access/billing/quota HTTP 402/403/404/429 failure and records completed trials;
-timeouts count as failed trials without retry. Existing request logs are never
-overwritten. Native structured output is excluded from the baseline comparison.
-
-The separate `npm run bench:schema -- --output docs/benchmarks/my-schema-probe.json`
-probe tests a proposal JSON Schema with Flash-Lite's optional constructor-level
-schema configuration. It still returns untrusted text through the existing
-provider boundary and uses the existing agent's validation. It does not redesign
-the application or enable native schemas for normal CLI/benchmark requests.
-Google documents [Flash-Lite model capabilities](https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash-lite)
-and [REST response-format/schema configuration](https://ai.google.dev/api/generate-content#ResponseFormatConfig).
-
-See Google's [hosted Gemma documentation](https://ai.google.dev/gemma/docs/core/gemma_on_gemini_api)
-for model availability. The provider uses the REST API and Node's built-in fetch,
-so no inference SDK dependency is needed.
-
-Example terminal conversation:
-
-```text
-User: I have pasta, onion, garlic, canned tomatoes and parmesan.
-Sous: We can make Tomato Parmesan Pasta. ... Would you like to make it?
-User: yes
-Sous: Great. First, finely dice the onion and mince the garlic.
-User: what do I do next?
-Sous: Next, finely dice the onion and mince the garlic.
-User: done
-Sous: Next, heat olive oil...
-```
-
-Actual dishes and instructions depend on the model. `yes` accepts the proposal,
-generates and validates a recipe, and starts cooking at its first step. `no`
-allows new ingredient input before acceptance. `now`, `next`, `what do I do now?`,
-and `what do I do next?` read the current instruction without advancing.
-`done` completes the current step and advances; repeat until Sous confirms completion.
-`help` lists commands and `exit` quits. Restart the CLI for a new meal.
-Piped input is supported as well.
-
-During cooking, other messages go to adaptive reasoning. For example:
-
-```text
-User: oh i dont have tomato paste, my bad
-User: Can I use pecorino instead of parmesan?
-User: We're actually cooking for four people.
-User: The sauce is too thick.
-User: I already chopped them and added them to the pan.
-```
-
-Sous can explain an ingredient replacement or omission, adapt remaining
-instructions, scale unused ingredients, give immediate advice, reconcile clear
-progress, or ask a follow-up question. Reply naturally to clarification questions.
-Exact advice and adaptations come from Gemma; the application applies only
-validated operations. `next` still reads the current instruction and `done`
-still completes it without a model call. Failed adaptive requests leave state
-intact; repeat your message or clarify it to retry.
-
-Model failures or invalid JSON leave state intact. After a failed proposal,
-enter ingredients again; after failed recipe generation, enter `yes` again.
-There are no automatic retries or fallbacks to a different model family.
-
-The CLI prints one concise `[timing]` summary to stderr for each proposal,
-recipe, and adaptive request. Development-mode agents (`NODE_ENV=development`)
-also enable these summaries; other agents are silent unless given a timing
-reporter as the fourth constructor argument. Diagnostics contain only fixed flow
-labels, success/failure, and durations, never prompts, model responses, errors,
-credentials, or headers.
-
-Timings use the monotonic `performance.now()` clock:
-
-- `total`: agent method entry through result preparation or failure, excluding
-  time waiting for user input and terminal output/reporting.
-- `llm`: the complete `LLMProvider.generate` call, including HTTP/network latency,
-  remote generation, and provider response decoding. This does not separately
-  measure model compute time.
-- `parse/validate`: structured JSON parsing, action/recipe/proposal validation,
-  and accepted-proposal matching.
-- `app/domain`: application state changes, explicit store operations (including
-  their defensive validation), stale-state checks, and detached result snapshots.
-
-Prompt/context preparation and preflight checks contribute to `total`; the phase
-durations need not sum exactly to it. Failed requests include durations through
-the failed phase; phases not reached show `n/a`. Reporting errors are ignored so
-diagnostics cannot turn a successful interaction into a failure. Deterministic
-`done` and `next` commands do not call the model or emit these summaries.
-
-HTTP 402 means the API key's billing account has depleted prepaid credits,
-according to Google's [API error reference](https://ai.google.dev/gemini-api/docs/generate-content/api-errors).
-Google lists Gemma 4 as free on the [Free Tier](https://ai.google.dev/gemini-api/docs/pricing#gemma-4).
-For free access, use a key from a Free Tier project in Google AI Studio, with
-no linked billing account. Google's [billing guide](https://ai.google.dev/gemini-api/docs/billing)
-also describes returning an existing project to the Free Tier by disabling its
-billing; a separate project avoids affecting its other Cloud services.
-Prepaid projects do not automatically return to the Free Tier when credits run
-out. If you choose to retain prepaid billing, restore credits before retrying.
-Changing ingredients or choosing another model with the same depleted billing
-account will not resolve this billing error.
-
-## Application and provider boundary
-
-`src/application/cooking-agent.ts` exposes `proposeDish`, `acceptProposal`,
-`getCurrentStep`, `completeCurrentStep(expectedStepId)`, and
-`adaptCooking(userMessage)` for use without the
-CLI or web UI. `LLMProvider` has a single `generate(prompt)` method returning
-untrusted text; `src/infrastructure/gemma-provider.ts` implements it.
-
-Gemma receives JSON context containing ingredient input, the accepted proposal
-when generating a recipe, and `currentSession` (null before session creation).
-Adaptive requests include the recipe, servings, ingredients, completed/current/
-remaining steps, already-used ingredient IDs, substitutions, and any pending
-clarification. Session IDs, timers, and lifecycle metadata are omitted. Current
-step queries and explicit completion still require no inference.
-
-The application requests JSON and parses it strictly, allowing a single JSON
-markdown fence. It validates proposals and recipes at runtime before any session
-write. Recipe validation checks required fields, quantities, unique IDs, ordered
-steps and ingredient references, rejects extra fields, and requires the accepted
-dish and servings. The domain store also validates recipes at its creation boundary.
-Only `CookingSessionStore` creates, progresses, or adapts sessions. The model
-cannot replace a session, choose its lifecycle status, or edit timers or history.
-
-`src/domain/adaptive-action.ts` defines and validates these discriminated actions:
-
-| Action | Payload and operation |
-| --- | --- |
-| `ingredient_change` | Original ingredient ID, replacement ingredient (null for omission), reason, remaining step updates and additional ingredients → `changeIngredient`; same-ingredient quantity corrections update the canonical ingredient in place |
-| `scale_servings` | Positive integer servings, exceptions to scaling, remaining step updates and additional ingredients → `scaleServings` |
-| `cooking_problem` | Advice plus remaining step updates and additional ingredients → `adjustCookingInstructions`; empty arrays mean advice only |
-| `reconcile_progress` | Step IDs with exact quotes from the latest user message → `reconcileProgress` |
-| `clarification` | A short question; no store mutation |
-
-All actions require a non-empty `message`. Extra fields, unknown actions, invalid
-quantities/references, new or completed step IDs, skipped progression, and
-invented evidence are rejected. Operations validate on a copy and commit once;
-an invalid action cannot leave a partially changed session. The agent rejects
-overlapping operations and responses whose session context changed during inference.
-
-Completed instructions and ingredient references stay unchanged. An explicit
-same-ingredient quantity correction (for example, use three carrots instead of
-one) updates the canonical ingredient total under its existing ID. It does not
-append another recipe ingredient or fabricate a substitution. The previous
-ingredient snapshot and completed-step prefix are retained separately in
-`quantityChanges`, allowing the agent to distinguish the new plan from physical
-history. Every affected remaining instruction must be explicitly revised; failed
-corrections roll back both quantity and history. Legacy responses with a fresh ID
-for the same canonical name are mapped back to the original ID. Count-unit aliases
-are accepted, while ambiguous unit conversions are rejected. Same-named duplicate
-additions are rejected; deliberate extra lots use distinct descriptive names.
-
-The UI formats canonical count data such as `{name: "carrot", quantity: 3,
-unit: "piece"}` as **3 carrots**, using a bounded English presentation formatter.
-It does not mutate domain data or hide duplicates in the ingredient list.
-
-Outside explicit quantity corrections, ingredients referenced in a completed step
-keep their recorded quantity and identity. Scaling multiplies only unused numeric
-quantities by the new/old servings ratio; unspecified quantities and explicit exceptions
-remain unchanged. Gemma can add distinct ingredients with explicit quantities
-and revise remaining instructions to compensate for amounts already used.
-Substitutions are recorded, including omissions; used originals are retained
-for historical references.
-
-This is conservative ingredient tracking: partial use within a step is not
-measured. Reconciliation accepts only a contiguous prefix beginning at the
-current step, with quoted user evidence for each whole step. Whether the evidence
-actually implies that the whole step happened, culinary suitability, and wording
-of updated instructions depend on model reasoning. Ambiguous cases are prompted
-to request clarification. Steps cannot be inserted, deleted, or reordered;
-additional work must fit within current/future instructions.
-
-The adapter rejects blocked, incomplete, or empty responses and uses a 120-second
-request timeout. The API key is sent only in a header; remote error bodies and
-transport diagnostics are never displayed.
-
-## Domain
-
-`src/domain/types.ts` defines ingredients (including quantities), recipes,
-ordered steps, sessions, substitutions, and timers. Timer scheduling remains
-outside this milestone.
-
-`CookingSessionStore` in `src/domain/cooking-session-store.ts` stores session
-snapshots in memory, independently of Next.js:
-
-```ts
-const store = new CookingSessionStore();
-store.createSession("dinner", recipe); // ready, no current step
-store.startSession("dinner"); // cooking, first step is current
-store.completeCurrentStep("dinner", recipe.steps[0]!.id);
-const session = store.getSession("dinner");
-```
-
-Completing a step advances to the next one; completing the final step marks the
-session completed and clears the current step. The caller supplies the expected
-step ID so a repeated request cannot accidentally advance another step. Invalid
-operations throw without changing state; fetching an unknown session returns
-`undefined`. Inputs and returned snapshots are copied to protect stored state.
-
-Each store instance is separate. Sessions are lost when the instance or process
-is discarded and are not shared between processes. The web server retains each
-agent/store in its process-global service across requests; the CLI retains its
-agent for the terminal session.
-
-## Voice during cooking
-
-Task 5 provides explicit push-to-talk in the unified Ask Sous composer. Use its
-microphone action, then **Stop** to finish and send; use **Cancel** to discard
-capture or **Stop** during playback. Typed questions and cooking buttons remain available after any failure.
-
-Configure `ELEVENLABS_API_KEY` in your untracked `.env.local` and restart Next.js.
-Optionally set `ELEVENLABS_VOICE_ID` to choose a voice. Both are server settings;
-never prefix the key with `NEXT_PUBLIC_`. Existing LLM provider settings and Gemma
-support are unchanged. See [voice architecture, timing and verification](docs/VOICE.md).
+[Demo scenario and recording outline](docs/release/DEMO.md) ·
+[Submission draft](docs/release/SUBMISSION.md) ·
+[Phone and Natalia handoff](docs/release/HUMAN-CHECKS.md)

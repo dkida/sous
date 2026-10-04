@@ -49,6 +49,9 @@ textarea::placeholder { color: #797e6d; }
 .proposal-layout { min-height: 460px; align-items: center; }
 .proposal-layout h1 { font-size: clamp(48px, 6vw, 90px); }
 .proposal-note { font-size: 13px; color: var(--muted); margin-top: 36px; line-height: 1.6; }
+.proposal-lists { margin: 20px 0 0; display: grid; gap: 8px; }
+.proposal-lists > div { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; }
+.proposal-lists dd { margin: 0; font-size: 15px; }
 .proposal-facts > div { display: flex; flex-direction: column; padding: 24px 0; border-top: 1px solid var(--muted); gap: 12px; }
 .proposal-facts strong { font-size: 58px; line-height: 1; letter-spacing: -3px; }
 .cooking-work { display: grid; grid-template-columns: 84px minmax(0, 1fr) 220px; column-gap: 28px; align-items: start; padding: 36px 36px 28px; }

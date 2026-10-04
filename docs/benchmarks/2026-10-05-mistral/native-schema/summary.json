@@ -1,0 +1,153 @@
+{
+  "provider": "mistral-native-schema",
+  "model": "mistral-small-2603",
+  "requests": 15,
+  "accepted": 12,
+  "acceptedWithCorrectTransition": 11,
+  "failureCounts": {
+    "providerApi": 0,
+    "malformedJson": 0,
+    "jsonSchema": 0,
+    "shapeValidation": 0,
+    "domainApplicability": 3,
+    "stateTransitionCheck": 1
+  },
+  "stepsMissingIngredientIds": 0,
+  "promptHashesMatchPromptOnlyRun": true,
+  "groups": [
+    {
+      "scenario": "proposal",
+      "n": 3,
+      "accepted": 3,
+      "acceptedWithCorrectTransition": 3,
+      "failures": [],
+      "totalMsAllTrials": {
+        "median": 673.7559880000008,
+        "min": 602.9467050000021,
+        "max": 763.376562
+      },
+      "llmMsAllTrials": {
+        "median": 673.5598059999993,
+        "min": 602.7751800000005,
+        "max": 762.725216
+      },
+      "totalMsAcceptedTrials": {
+        "median": 673.7559880000008,
+        "min": 602.9467050000021,
+        "max": 763.376562
+      }
+    },
+    {
+      "scenario": "recipe",
+      "n": 3,
+      "accepted": 3,
+      "acceptedWithCorrectTransition": 3,
+      "failures": [],
+      "totalMsAllTrials": {
+        "median": 3982.4556900000002,
+        "min": 3650.4393569999993,
+        "max": 4040.38472
+      },
+      "llmMsAllTrials": {
+        "median": 3979.4407980000005,
+        "min": 3649.9784190000028,
+        "max": 4039.396101999999
+      },
+      "totalMsAcceptedTrials": {
+        "median": 3982.4556900000002,
+        "min": 3650.4393569999993,
+        "max": 4040.38472
+      }
+    },
+    {
+      "scenario": "missing-paste",
+      "n": 3,
+      "accepted": 2,
+      "acceptedWithCorrectTransition": 2,
+      "failures": [
+        {
+          "iteration": 1,
+          "failureKind": "invalid-action",
+          "totalMs": 1850.9287329999997
+        }
+      ],
+      "totalMsAllTrials": {
+        "median": 1850.9287329999997,
+        "min": 1681.5786530000005,
+        "max": 2918.3967969999994
+      },
+      "llmMsAllTrials": {
+        "median": 1847.1558919999998,
+        "min": 1680.2721139999994,
+        "max": 2915.576326999999
+      },
+      "totalMsAcceptedTrials": {
+        "median": 2299.987725,
+        "min": 1681.5786530000005,
+        "max": 2918.3967969999994
+      }
+    },
+    {
+      "scenario": "scale-2-to-4",
+      "n": 3,
+      "accepted": 3,
+      "acceptedWithCorrectTransition": 2,
+      "failures": [
+        {
+          "iteration": 3,
+          "failureKind": "state-transition-check",
+          "totalMs": 1529.233741
+        }
+      ],
+      "totalMsAllTrials": {
+        "median": 1491.837614,
+        "min": 1422.8423039999998,
+        "max": 1529.233741
+      },
+      "llmMsAllTrials": {
+        "median": 1490.2222220000003,
+        "min": 1421.646146,
+        "max": 1528.0513869999995
+      },
+      "totalMsAcceptedTrials": {
+        "median": 1491.837614,
+        "min": 1422.8423039999998,
+        "max": 1529.233741
+      }
+    },
+    {
+      "scenario": "burning-onions",
+      "n": 3,
+      "accepted": 1,
+      "acceptedWithCorrectTransition": 1,
+      "failures": [
+        {
+          "iteration": 2,
+          "failureKind": "invalid-action",
+          "totalMs": 1243.845684
+        },
+        {
+          "iteration": 3,
+          "failureKind": "invalid-action",
+          "totalMs": 1270.0740369999985
+        }
+      ],
+      "totalMsAllTrials": {
+        "median": 1243.845684,
+        "min": 1162.3379519999999,
+        "max": 1270.0740369999985
+      },
+      "llmMsAllTrials": {
+        "median": 1243.0351269999992,
+        "min": 1160.303616000001,
+        "max": 1269.3216539999994
+      },
+      "totalMsAcceptedTrials": {
+        "median": 1162.3379519999999,
+        "min": 1162.3379519999999,
+        "max": 1162.3379519999999
+      }
+    }
+  ],
+  "providerShareOfTotalDuration": 0.9992584426260117
+}

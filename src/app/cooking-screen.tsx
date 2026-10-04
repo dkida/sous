@@ -224,7 +224,11 @@ export default function CookingScreen({ development = false, initialLanguage = "
         </div>}
 
         {state.proposal && <div className="entry-layout proposal-layout">
-          <div className="entry-main"><p className="eyebrow">{t.proposalLabel}</p><h1>{state.proposal.dishName}</h1><p className="intro">{state.proposal.description}</p><p className="proposal-note">{t.soundGood}</p></div>
+          <div className="entry-main"><p className="eyebrow">{t.proposalLabel}</p><h1>{state.proposal.dishName}</h1><p className="intro">{state.proposal.description}</p>
+            {/* Task 6.2: assumed staples and unconfirmed additions stay distinct from what the cook has. */}
+            <dl className="proposal-lists">{([[t.assumedLabel, state.proposal.assumedStaples], [t.optionalLabel, state.proposal.optionalAdditions], [t.shoppingLabel, state.proposal.shoppingAdditions]] as const)
+              .filter(([, items]) => items.length > 0).map(([label, items]) => <div key={label}><dt className="eyebrow">{label}</dt><dd>{items.join(" · ")}</dd></div>)}</dl>
+            <p className="proposal-note">{t.soundGood}</p></div>
           <aside className="proposal-facts"><div><strong>{state.proposal.estimatedCookingMinutes}</strong><span className="eyebrow">{t.estimated}</span></div><div><strong>{state.proposal.servings}</strong><span className="eyebrow">{servingsLabel(state.proposal.servings, language)}</span></div></aside>
         </div>}
 

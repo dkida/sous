@@ -1,0 +1,26 @@
+# One process-local cooking service. No database or autoscaling.
+# Starter is the smallest always-on choice; confirm billing before creation.
+services:
+  - type: web
+    name: sous
+    runtime: node
+    plan: starter
+    numInstances: 1
+    autoDeployTrigger: off
+    buildCommand: npm ci --include=dev && npm run build -- --webpack
+    startCommand: npm run start -- --hostname 0.0.0.0 --port "$PORT"
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: 22.18.0
+      - key: NODE_ENV
+        value: production
+      - key: MISTRAL_API_KEY
+        sync: false
+      - key: ELEVENLABS_API_KEY
+        sync: false
+      # Explicit, matching the application default: open-weight Mistral Small 4.
+      - key: LLM_PROVIDER
+        value: mistral
+      - key: LLM_MODEL
+        value: mistral-small-2603

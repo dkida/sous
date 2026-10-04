@@ -94,6 +94,7 @@ describe("adaptive CookingAgent", () => {
     const replacement = { id: "pecorino", name: "Pecorino", quantity: 25, unit: "g" };
     const change: AdaptiveAction = { type: "ingredient_change", message: "Use 25 g pecorino; it is saltier.",
       originalIngredientId: "cheese", replacement, reason: "Stronger, saltier cheese.", additionalIngredients: [],
+      ingredientAvailability: [{ ingredientId: "pecorino", basis: "cook_confirmed", evidence: "I have pecorino" }],
       stepUpdates: [{ id: "serve", headline: "Combine pasta and sauce", instruction: "Combine pasta and sauce and top with 25 g pecorino.", ingredientIds: ["pasta", "tomatoes", "pecorino"] }] };
     const { agent, provider } = setup([change, advice], 2);
     const result = await agent.adaptCooking("I don't have parmesan but I have pecorino.");
@@ -108,6 +109,7 @@ describe("adaptive CookingAgent", () => {
     const replacement = { id: "rice", name: "Cooked rice", quantity: 200, unit: "g" };
     const { agent } = setup([{ type: "ingredient_change", message: "Use rice for the remaining combination.",
       originalIngredientId: "pasta", replacement, reason: "Use what is available.", additionalIngredients: [],
+      ingredientAvailability: [{ ingredientId: "rice", basis: "cook_confirmed", evidence: "I have cooked rice" }],
       stepUpdates: [{ ...recipe().steps[3], headline: "Combine rice and sauce", instruction: "Combine rice and sauce; add parmesan.", ingredientIds: ["rice", "tomatoes", "cheese"] }] }], 2);
     const before = agent.getCurrentStep().session;
     const after = (await agent.adaptCooking("I cannot use the cooked pasta; I have cooked rice.")).session;
@@ -136,9 +138,10 @@ describe("adaptive CookingAgent", () => {
       { id: "extra-pasta", name: "Additional pasta", quantity: 200, unit: "g" },
       { id: "extra-garlic", name: "Additional garlic", quantity: 2, unit: "cloves" },
     ];
+    action.ingredientAvailability = action.additionalIngredients.map(({ id }) => ({ ingredientId: id, basis: "cook_confirmed" as const, evidence: "I have more pasta and garlic" }));
     const { agent } = setup([action], 2);
     const before = agent.getCurrentStep().session;
-    const after = (await agent.adaptCooking("We're actually four people.")).session;
+    const after = (await agent.adaptCooking("We're actually four people, and I have more pasta and garlic.")).session;
     assert.equal(after.recipe.servings, 4);
     assert.deepEqual(after.recipe.steps.slice(0, 2), before.recipe.steps.slice(0, 2));
     assert.deepEqual(after.completedStepIds, before.completedStepIds);
@@ -166,6 +169,7 @@ describe("adaptive CookingAgent", () => {
   it("adapts current/future problem instructions with an explicit added ingredient", async () => {
     const { agent } = setup([{ type: "cooking_problem", message: "Stir in a little water now.",
       additionalIngredients: [{ id: "water", name: "Water", quantity: 30, unit: "ml" }],
+      ingredientAvailability: [{ ingredientId: "water", basis: "assumed_staple", evidence: null }],
       stepUpdates: [{ id: "sauce", headline: "Stir in water", instruction: "Stir in 30 ml water, then simmer gently.", ingredientIds: ["tomatoes", "paste", "water"] }] }], 2);
     const before = agent.getCurrentStep().session;
     const after = (await agent.adaptCooking("The sauce is too thick.")).session;
@@ -177,7 +181,7 @@ describe("adaptive CookingAgent", () => {
   it("includes newly available garlic through a plan adjustment without inventing a substitution", async () => {
     const garlic = { id: "extra-garlic", name: "Additional garlic", quantity: 1, unit: "clove" };
     const action: AdaptiveAction = { type: "cooking_problem", message: "Mince one extra clove and cook it with the tomatoes.",
-      additionalIngredients: [garlic], stepUpdates: [{ id: "sauce",
+      additionalIngredients: [garlic], ingredientAvailability: [{ ingredientId: "extra-garlic", basis: "cook_confirmed", evidence: "i have garlic too" }], stepUpdates: [{ id: "sauce",
         headline: "Mince the extra garlic", instruction: "Mince one extra clove of garlic. Add it with the tomatoes and tomato paste; simmer.",
         ingredientIds: ["tomatoes", "paste", "extra-garlic"] }] };
     const { agent } = setup([action], 2);
@@ -196,6 +200,7 @@ describe("adaptive CookingAgent", () => {
     const question: AdaptiveAction = { type: "clarification", message: "Would you like to add extra garlic?" };
     const addition: AdaptiveAction = { type: "cooking_problem", message: "Mince another clove and add it to the sauce.",
       additionalIngredients: [{ id: "extra-garlic", name: "Additional garlic", quantity: 1, unit: "clove" }],
+      ingredientAvailability: [{ ingredientId: "extra-garlic", basis: "cook_confirmed", evidence: "i have garlic" }],
       stepUpdates: [{ id: "sauce", headline: "Mince another clove", instruction: "Mince another clove; add it with tomatoes and paste and simmer.",
         ingredientIds: ["tomatoes", "paste", "extra-garlic"] }] };
     const { agent, provider } = setup([question, addition], 2);
